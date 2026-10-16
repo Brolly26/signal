@@ -1,3 +1,12 @@
+# AGENTS.md — Signal frontend
+
+The project-wide rules live in `../AGENTS.md` and `../CLAUDE.md` and apply here
+too. In particular: every prompt must be appended to `../prompts.txt` with an
+ISO 8601 timestamp and a summary of what was done. Never put a secret in a
+`NEXT_PUBLIC_*` variable.
+
+The block below is generated and re-added by `next dev`; leave it in place.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
