@@ -575,12 +575,12 @@ ACTIONS:
         "scheduled email reports" and "automatically send recurring summary to
         recipients"
       Stage 3 both combined ............. FAIL, same schema rejection
-  - My written prediction was WRONG: I had named / as the likely
-    cause. / is accepted. The rejected keyword is , which
+  - My written prediction was WRONG: I had named $defs/$ref as the likely
+    cause. $defs/$ref is accepted. The rejected keyword is maxItems, which
     Pydantic emits from the max_length bound on the related_requests list.
   - Ran a second probe that strips the keyword named in each rejection and
     retries, to find the minimal change empirically rather than guess. REAL
-    RESULT: removing  alone is sufficient. The schema is then
+    RESULT: removing maxItems alone is sufficient. The schema is then
     accepted, and the returned JSON validates against AIAnalysisOutput
     (theme 'Keyboard shortcuts', needs_clarification False).
   - Confirmed the orchestrator-shaped request (system prompt + strict tool +
@@ -589,7 +589,7 @@ ACTIONS:
     report emailed to manager" - the agentic path is reachable and the model
     searches for the underlying need, not only the literal words. Usage 2189
     in / 169 out.
-  - Changed NO project file. The required fix (strip  in
+  - Changed NO project file. The required fix (strip maxItems in
     app/schemas/ai_output.py::analysis_json_schema(); Pydantic keeps enforcing
     the bound when the response is validated) was reported to the user with the
     evidence and is awaiting authorisation, per the instruction to implement
@@ -597,4 +597,9 @@ ACTIONS:
   - Items 4, 5 and 6 of the audit remain blocked: the analysis flow cannot
     complete until the schema fix is approved, and the database and servers are
     not running.
+  - LOG CORRECTION, same session: this entry was written through an unquoted
+    shell heredoc, so the shell expanded $defs/$ref and executed the
+    backticked word maxItems as a command, leaving four gaps in the text
+    above. Those gaps were repaired to the wording as intended. No other
+    part of this entry and no earlier entry was altered.
 ================================================================================
