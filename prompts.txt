@@ -1013,3 +1013,56 @@ ACTIONS:
   - Prepared likely interview questions with answers grounded in the code.
   - No code changed, nothing published, nothing recorded.
 ================================================================================
+================================================================================
+[2026-10-16T16:29:16-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Turn the recording guide into a LOCAL HTML file, responsive and optimised for
+  reading on a phone while recording on the computer. Do not publish it on the
+  internet. Organise each step with estimated time, the screen to open, exact
+  actions in Portuguese, narration in English with short sentences, important
+  phrases highlighted, warnings about variable AI results, and alternative
+  phrases for failure or unexpected behaviour. Add a progress bar and quick
+  navigation between blocks, with no internet dependency. Remove the optional
+  form-validation test. Also produce a simple visual technical diagram for the
+  architecture section showing Next.js, FastAPI, PostgreSQL, the Anthropic API,
+  tool calling and human review, representing the real implementation rather
+  than a hypothetical one. Do not expose credentials, do not reset the
+  database, do not publish the repository. Prepare the files and wait for
+  review before recording.
+ACTIONS:
+  - Created TWO files on the Desktop, deliberately OUTSIDE the repository so
+    nothing Portuguese-language or presentation-specific enters the public
+    deliverable, and nothing is committed without being asked:
+      C:/Users/GB/Desktop/signal-demo-script.html   - the teleprompter
+      C:/Users/GB/Desktop/signal-architecture.html  - the diagram to show
+    The second file exists because the diagram has to be displayed on the
+    COMPUTER during the recording; a diagram living only on the phone would be
+    useless for that block.
+  - The teleprompter has 8 blocks, a scroll-driven progress bar, 8 quick-nav
+    chips that follow the current block, per-block check-off persisted in
+    localStorage, 41 narration lines, 2 variability warnings and 5 fallback
+    scripts for failure or unexpected AI behaviour. The optional
+    form-validation beat was removed as instructed.
+  - Verified rather than assumed: both files contain ZERO external URLs, so
+    they work with no internet; neither contains an API key, a connection
+    string, the Supabase host or the project reference; and the HTML parses
+    with no unclosed tags.
+  - Measured the phone layout by constraining the document to 390 px in the
+    page itself, since the extension cannot capture a resized viewport: no
+    horizontal overflow, no element wider than the screen, the nav strip
+    scrolls horizontally as designed, and narration renders at 18 px. The
+    check-off row measured only 20 px tall, below a comfortable tap target, so
+    it was enlarged to 55 px and re-measured.
+  - The first version of the diagram was rendered and REJECTED on inspection:
+    the arrow labels collided with each other and with the curves, which would
+    have looked cluttered on camera. Rewrote it so the arrows carry only
+    numbers and a numbered legend below explains each step. Re-rendered and
+    confirmed legible. Also fixed a corrupted CSS value introduced while
+    editing.
+  - The diagram states only what is implemented: the request committed before
+    any model call, one read-only tool capped at 8 rows, the bounded loop, the
+    validation gate where the classification is derived, the foreign key, and
+    the human decision as the only way a link is created.
+  - Nothing was published, the database was not reset, the nine records are
+    untouched, and no repository file was added or changed.
+================================================================================
