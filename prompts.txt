@@ -979,3 +979,37 @@ ACTIONS:
     declared approved before the run completed.
   - Nothing published, pushed, recorded or submitted.
 ================================================================================
+================================================================================
+[2026-10-16T16:08:28-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Pasted a complete draft of the five-minute demo narration in English,
+  "Signal - Technical Assessment Demo", in six sections: introduction, Request
+  Board, AI Analysis, Human Review, Technical Architecture, and Testing /
+  trade-offs / conclusion. No explicit question; the agreed next step was the
+  presentation, so this was treated as a request to review it.
+ACTIONS:
+  - Reviewed the script for factual accuracy against what was actually built
+    and measured, not for style alone.
+  - Found ONE factual error: the script says "demo-only authentication".
+    There is no authentication at all - only a browser-scoped key for voting.
+    Flagged as a must-fix, because the brief warns against presenting security
+    that does not exist and the phrasing implies some exists.
+  - Everything else in the script was checked and is accurate: the request is
+    persisted before the AI call, tool calling is real and model-driven
+    (verified retrieval_mode=agentic with 2 tool calls), per-candidate
+    explanations exist, decisions are stored and originals preserved, the
+    model cannot reference requests that do not exist, a failed analysis does
+    not cost the request, the maxItems schema incompatibility was found by a
+    real API test, and the eval label was corrected without claiming a model
+    improvement.
+  - Measured the timing rather than guessing: 469 words, about 3.6 minutes of
+    narration at a careful non-native pace, plus roughly 1.5 minutes of
+    unavoidable dead time (typing, the ~11 s analysis, clicks, page loads on
+    Supabase). Total around 5.1 minutes, so the script is correctly sized.
+  - Suggested one missing beat - that the model searched for the underlying
+    need rather than the customer's words, which is the product's thesis and
+    the strongest moment of the demo - plus three real numbers to cite, and
+    line-level English polish that keeps the author's own register.
+  - Prepared likely interview questions with answers grounded in the code.
+  - No code changed, nothing published, nothing recorded.
+================================================================================
