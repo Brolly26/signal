@@ -291,3 +291,73 @@ ACTIONS:
   - Did NOT implement voting, search, tool calling or the Decision Inbox, and
     did NOT advance to Phase 2, as instructed.
 ================================================================================
+
+================================================================================
+[2026-10-16T01:04:03-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  "Dessa vez, quero que voce mesmo revise e logo depois, pode partir para a p2."
+  (Review your own Phase 1 work yourself, then proceed to Phase 2.)
+ACTIONS:
+  Self-review of Phase 1 - four findings, three of them real defects in my own
+  code, all fixed in commit 87d2881:
+    1. The list query claimed a consistent snapshot it did not have.
+       readonly=True only states intent; under the default READ COMMITTED each
+       statement takes a fresh snapshot, so a row committed between the two
+       queries could make total disagree with items. Changed to REPEATABLE READ.
+    2. RequestList caught every exception and rendered it as an API failure,
+       which would have presented a bug in the component as a backend problem.
+       Only ApiRequestError is a UI state now; anything else re-throws.
+    3. Two comments claimed exceptions were logged without their message while
+       the code called logger.exception, which writes the traceback - and a
+       connection error's message can carry the DSN. Database failures are now
+       logged as a type with no traceback; the handler for genuine bugs keeps
+       the traceback deliberately, and that trade-off is stated in the README
+       instead of being described inaccurately in a comment.
+    4. Verification gap, not a defect: I had confirmed the rendered HTML carried
+       real data but never that the Tailwind classes compiled. Checked the built
+       CSS: every custom token utility, the dark-mode block, hover variants and
+       the /40 opacity modifier are present.
+
+  Phase 2 - support (voting), search and ordering:
+  - Backend: app/schemas/vote.py (X-Voter-Key header constrained to an opaque
+    pattern, VoteResult), app/repositories/votes.py (INSERT ... ON CONFLICT DO
+    NOTHING so the unique index arbitrates), app/services/votes.py,
+    app/api/routes/votes.py. Supporting is idempotent - 201 new, 200 already -
+    which replaced the 409 the earlier plan described; recorded as ADR-015
+    rather than changed silently. HTTPException now renders in the project
+    error shape instead of FastAPI's {detail: ...}.
+  - Search and ordering: tsvector match (stemming works) with a
+    case-insensitive substring fallback for partial words, the term always a
+    bound parameter, strpos instead of ILIKE so pattern metacharacters need no
+    escaping, and fixed ORDER BY clauses chosen by a validated enum. vote_count
+    is a scalar subquery, not a denormalised column. Recorded as ADR-016.
+  - Frontend: search and sort are a plain GET form plus two links with no
+    client JavaScript, so the URL is the state; the support button is the only
+    client component and re-syncs from the authoritative count in every
+    response, with localStorage holding only a cache of what the API reported.
+  - Executed and verified, real results: pytest => 123 passed in 16.80s (84
+    from P1 plus 39 new), 0 warnings; the suite leaves all tables at 0 rows.
+    npx tsc --noEmit exit 0; npm run build compiled successfully with / still
+    emitted as Partial Prerender despite reading searchParams.
+  - Live end-to-end against a running backend and the production frontend
+    build: support => 201 then 200 on repeat with vote_count 1; three
+    identities => 3; withdraw => count 2 and has_voted false; withdraw again =>
+    200; unknown request => 404; missing header => 422 keyed X-Voter-Key.
+    Search: Okta (title), spreadsheet (description), reports -> report
+    (stemming), spreadsh (partial word), sales (two matches), no-match => empty
+    with total 0; sort=top => 2 1 0; search+sort combined; "'; DROP TABLE
+    feature_requests; --" => HTTP 200 with the table intact; sort=votes => 422.
+    Board HTML carried the search control, both sort links, aria-current on the
+    active one, aria-pressed on the support buttons, counts 1 0 2 in recent
+    order and 2 1 0 under sort=top, the filtered result for ?q=Okta, and the
+    "No matching requests" state. Verification data deleted afterwards.
+  - Two problems hit during verification, both fixed: h-9.5 generates no CSS in
+    Tailwind 4, so the search skeleton had zero height; and an orphaned
+    next-server process from the Phase 1 check still held port 3000, so the
+    first UI run was served by the stale Phase 1 build and its results were
+    discarded as invalid rather than reported.
+  - STILL PENDING, not done and not claimed as done: the authenticated
+    Anthropic smoke test. ANTHROPIC_API_KEY remains empty in backend/.env.
+  - Five commits on main. Did NOT implement tool calling, the Decision Inbox or
+    any optional feature, and did NOT publish or push anything.
+================================================================================
