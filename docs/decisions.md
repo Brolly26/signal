@@ -456,3 +456,48 @@ property against a status code no consumer uses.
 monitored by something that keys on HTTP status, the route would be opted out of
 prerendering. That is a one-line change, recorded here so it is a decision
 rather than an oversight.
+
+---
+
+## ADR-019 — A label was corrected; the prompt was not
+
+**What happened.** The first live evaluation run failed one case of six:
+`duplicate-different-words`, the "Excel export" versus "scheduled report
+delivery" pair. The label said `DUPLICATE`; the model answered `RELATED`.
+
+**Decision: correct the label, leave the system prompt alone.**
+
+**Why the model was right.** Our own system prompt defines the two values:
+
+> `DUPLICATE`: it represents essentially the same need.
+> `RELATED`: there is a shared underlying problem, but the requests are not
+> interchangeable and could be delivered separately.
+
+An export button and a scheduled email are not interchangeable, and either
+could ship without the other. The label contradicted the definition the model
+was given. During the end-to-end journey the model made the distinction
+unprompted: *"That is a separate deliverable from an export, so I marked them
+related rather than duplicate."*
+
+**Why the prompt was not changed.** Making "same need, different deliverable"
+a duplicate is a product decision with real consequences — it would push the
+system toward consolidating requests that a team would ship separately, and a
+false duplicate costs a product manager more than a missed one. Changing it to
+make a test pass would have been the worst of both: a product change motivated
+by a metric.
+
+**How the change is kept honest.** The dataset is versioned, the label change
+carries its justification in `cases.json`, and both runs are preserved in
+`backend/evals/RESULTS.md` — v1 at 5/6 with the failure explained, v2 at 6/6.
+The model returned the same answer in both, so the difference is **not** a model
+improvement, and the documentation says so in those words.
+
+**The real lesson is about the labels, not the model.** One person wrote them,
+and that is exactly how the error got in. A measurement anyone should trust
+needs several independent labellers and a reported agreement rate; that is
+recorded as future work rather than implied to exist.
+
+**Provenance correction.** The Excel-export example comes from our own Signal
+product specification, not from the assessment brief. Earlier wording of mine
+attributed it to the brief; that was wrong, and the eval dataset now records the
+provenance next to the case.

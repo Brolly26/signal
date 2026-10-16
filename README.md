@@ -12,15 +12,18 @@ The operating principle is **AI recommends, humans decide**. The model has no
 write access to anything. It cannot delete, merge or alter a request, and every
 reference it returns is checked against data the backend retrieved itself.
 
-> **Status.** The required workflow is complete and tested: submit, browse,
-> search, support, analyse with a real LLM integration, review, and persist.
+> **Status.** The required workflow is complete and verified against the real
+> model: submit, browse, search, support, analyse, review and persist.
 >
-> **One thing is not verified and is not claimed to be:** the authenticated
-> smoke test against the Anthropic API has not been run, because no API key was
-> configured during development. The SDK surface was verified by introspection
-> (see [Verification status](#verification-status)); whether the server accepts
-> this exact `output_config.format` schema for the configured model is unproven
-> until that test runs. Everything else below was executed.
+> The authenticated integration has now been exercised end to end with
+> `claude-sonnet-5-5` — structured output, real tool calling, a full analysis,
+> human review and persistence after a reload. It **failed the first time**, for
+> a reason no amount of unit testing would have caught; see
+> [What the first authenticated run found](#what-the-first-authenticated-run-found).
+>
+> Figures measured with the real model are kept separate from figures produced
+> with a scripted one, throughout. See
+> [Verification status](#verification-status).
 
 ---
 
@@ -183,10 +186,14 @@ With the seed applied and a real API key configured:
    need, the theme, each proposed relationship **with the evidence for it**, and
    a footer with the model, the retrieval mode, the number of searches and the
    latency.
-4. **The interesting case** — submit "Export sales data to Excel" with a
-   description about rebuilding a weekly report by hand. The seeded
-   "Scheduled report delivery" shares almost no vocabulary with it; if the
-   analysis connects them, it did so by searching for the *need*, not the words.
+4. **The interesting case** — submit a request about downloading the weekly
+   numbers as a spreadsheet, describing the Friday copy-and-email routine. What
+   was observed with the real model: `DUPLICATE` of the seeded
+   "Export sales data to Excel" (near-identical workflow), and `RELATED` to
+   "Scheduled report delivery" — which shares almost no vocabulary with it, so
+   it was reached by searching for the *need*, not the words. The model's
+   reasoning explains why scheduled delivery is related rather than duplicate,
+   and why it left "Saved report templates" out.
 5. **Review** — *Decision inbox*. Approve the duplicate, reject the related one,
    add a reason. Both original requests remain, intact and separate; the request
    page now shows an **Approved relationship**.
@@ -318,10 +325,12 @@ cd backend && .venv/Scripts/python evals/run_eval.py
 cd frontend && npx tsc --noEmit && npm run build
 ```
 
-**221 tests pass.** Integration tests run against real PostgreSQL, because most
-of them verify constraints and indexes only Postgres enforces. Each runs inside
-a transaction that is rolled back, so order never matters and nothing is left
-behind.
+**224 tests pass in 42s, with no network access.** Integration tests run against
+real PostgreSQL, because most of them verify constraints and indexes only
+Postgres enforces. Each runs inside a transaction that is rolled back, so order
+never matters and nothing is left behind. An autouse fixture clears the AI
+provider for every test, so the suite cannot reach the real API by accident —
+that was a defect once, and it cost tokens.
 
 What they cover: schema constraints and every documented error code · vote
 uniqueness and idempotent support · search by title and description, stemming,
@@ -334,11 +343,33 @@ concurrent retries where only one may win · the review rules, including that a
 rejection cannot remove a link approved from the other side · the audit log
 staying append-only.
 
-The evaluation suite (`backend/evals/`) scores ten labelled cases, including
-adversarial ones, and reports duplicate precision with its sample size. **Read
-[`backend/evals/README.md`](backend/evals/README.md) before quoting any number
-from it:** mock mode measures the pipeline, not model judgement, and the report
-labels the mode on every run.
+### Simulated results versus real-model results
+
+These are different measurements and the project never merges them. The report
+states its mode on every run, and every measured figure is kept in
+[`backend/evals/RESULTS.md`](backend/evals/RESULTS.md) against the dataset
+version that produced it.
+
+| | **Mock** — scripted model | **Live** — `claude-sonnet-5-5` |
+|---|---|---|
+| What it measures | the **pipeline**: reference checking, derived classification, failure codes, prompt framing | the **model's judgement** on labelled cases |
+| Cases | 10/10 | 6/6 on dataset v2 · **5/6 on v1** |
+| Duplicate precision | 1.00 (n=2) — *of the pipeline* | 1.00 (n=2) |
+| Duplicate recall | 1.00 (n=2) | 1.00 (n=2) on v2 · 0.67 (n=3) on v1 |
+| Unverifiable references | 0 | 0 |
+| Retrieval path | n/a | `agentic` on all 6, 2 tool calls each |
+| Latency | ~4 ms (no network in the path) | mean 6816 ms, max 8718 ms (n=6) |
+
+**The v1 → v2 difference is not a model improvement.** The model returned the
+same answer both times. A label in our dataset contradicted the definition in
+our own system prompt, the live run exposed it, and **the label was corrected
+rather than the prompt**. The 5/6 run is kept, with its reasoning, because it is
+the more informative result. `RESULTS.md` says this at length.
+
+A mock precision of 1.00 says the pipeline handled a scripted answer correctly.
+It is not an LLM accuracy figure and is never presented as one. Neither is the
+live figure: `n=2` duplicate proposals cannot support an accuracy claim, and the
+labels were written by one person — which is exactly how the v1 error got in.
 
 The frontend has no component test framework, so the two client components are
 covered by reasoning and manual verification, not automated tests. Stated here
@@ -346,12 +377,58 @@ rather than left to be discovered.
 
 ### Verification status
 
-| Verified by execution | Not verified |
+Everything in the left column was executed and its output observed. The right
+column is what remains unmeasured, stated so it cannot be mistaken for a claim.
+
+| Verified against the real model (`claude-sonnet-5-5`) | Evidence |
 |---|---|
-| 221 tests, the eval suite, `tsc`, `next build` | the authenticated Anthropic smoke test |
-| migrations against Postgres 16, the seed applied twice | the live provider accepting this `output_config.format` schema |
-| every board, analysis and review state rendered against a running backend | any latency or accuracy figure from a real model |
-| SDK surface by introspection: `output_config`, `strict`, `messages.parse`, `AsyncAnthropic`, `betas`/`fallbacks` only on the beta namespace | — |
+| Credential authenticates | `stop_reason=end_turn` |
+| **Structured output** — `output_config.format` with this schema | response validated against `AIAnalysisOutput`; **worked only after the schema fix below** |
+| **Real tool calling** — the `strict: true` tool definition | accepted, and the model called it |
+| **The model chooses to search** | `retrieval_mode=agentic` on every live run; the fallback never triggered |
+| **Two tool calls in the main journey** | `tool_calls_count=2`, queries `"Excel export of sales data"` and `"scheduled weekly emailed sales report to manager"` |
+| **A complete analysis** | `completed` in 9032 ms, `DUPLICATE` / `MERGE_CANDIDATE`, 3 candidates with per-candidate evidence, `fabricated_refs_count=0` |
+| **End-to-end journey** | create → board → search → vote → duplicate vote blocked → inbox → approve + reject with reasons → reload renders the approved link from Postgres; both originals still return 200 |
+| **Live evaluation** | 6 labelled cases, see [`backend/evals/RESULTS.md`](backend/evals/RESULTS.md) |
+
+| Verified without the model | Not measured |
+|---|---|
+| 224 tests, mock eval, `tsc`, `next build` | per-request token cost (not instrumented) |
+| migrations against Postgres 16, seed applied twice | retrieval recall — whether the request that *should* be found was in the candidate set |
+| every board, analysis and review state rendered against a running backend | the `backend_fallback` path under live conditions; the model has always chosen to search |
+| SDK surface by introspection | any production accuracy claim — the labelled set is far too small |
+
+### What the first authenticated run found
+
+The first time a real key was configured, two defects surfaced that the test
+suite could not have caught, because it runs against a scripted model.
+
+**1. The analysis could never have completed.** Sending the response schema as
+Pydantic generates it was rejected:
+
+```
+HTTP 400 output_config.format.schema:
+  "For 'array' type, property 'maxItems' is not supported"
+```
+
+`maxItems` came from the `max_length=8` bound on `related_requests`.
+`analysis_json_schema()` now filters that keyword out. **Nothing is lost:** the
+bound stays on the Pydantic model and is still enforced when the response is
+validated, so the guarantee is ours rather than delegated to the provider —
+which is the whole point of validating the model's JSON a second time. The same
+run confirmed `$defs`/`$ref` and `additionalProperties: false` *are* accepted,
+so nothing else needed removing. A prediction written beforehand had named
+`$defs` as the likely culprit; it was wrong.
+
+**2. The test suite started calling the real API.** With a key present,
+submitting a request queued a genuine background analysis, so running the suite
+made live calls to the provider — slow, non-deterministic and billable — and
+broke the two tests asserting the no-provider behaviour. An autouse fixture now
+clears the provider for every test, so reaching the real API from the suite
+requires asking for it deliberately.
+
+Both are recorded in [`prompts.txt`](prompts.txt) with the commands that found
+them.
 
 ---
 
@@ -365,8 +442,10 @@ Three metrics, with collection method and failure modes in
    and **time to human decision** (`completed_at` → first decision). Kept apart
    so a fast model cannot hide a slow review queue.
 2. **Duplicate recommendation precision** — on a labelled set, at the candidate
-   level, reported with its sample size. In production it would come from the
-   decisions themselves: an approved `DUPLICATE` is a true positive.
+   level, reported with its sample size, and never quoting a mock figure as a
+   model figure. Measured so far: 1.00 with n=2 against the real model, which is
+   a regression signal and not an accuracy claim. In production it would come
+   from the decisions themselves: an approved `DUPLICATE` is a true positive.
 3. **Human recommendation acceptance rate** — approvals over decisions, from the
    audit log, collapsed to the current decision per pair. Misleading in both
    directions on its own; `docs/metrics.md` says why.

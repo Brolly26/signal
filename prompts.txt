@@ -665,3 +665,77 @@ ACTIONS:
   - Did NOT publish the repository, push, send email, record anything, or change
     LLM_MAX_TOOL_CALLS.
 ================================================================================
+================================================================================
+[2026-10-16T14:48:36-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Audit reviewed; final adjustments authorised.
+  Decision 1 - duplicate-different-words: agrees that "Excel export" and
+    "scheduled report delivery" should be RELATED, since they share an
+    underlying need but are different features. Do NOT change the system prompt
+    merely to improve the result. Preserve the historical 5/6 result and
+    document the inconsistency between the original label and our product
+    definition. Then version the evaluation dataset, correct the label with that
+    justification, and run it again. Do not present the revised result as a
+    model performance improvement. Also correct any documentation attributing
+    that example to the official Metacto brief - it was introduced in our own
+    Signal specification.
+  Decision 2 - README: update Verification Status with the real results
+    (authentication, structured output after the schema fix, real tool calling,
+    two tool calls in the main journey, end-to-end journey, tests and evals),
+    document the first HTTP 400 with its cause and fix, and explicitly separate
+    simulated metrics from real-LLM metrics.
+  Decision 3 - keep LLM_MAX_TOOL_CALLS=4.
+  Demo preparation: the machine is short on RAM; propose a procedure running
+    PostgreSQL on Supabase, FastAPI locally and Next.js in production mode. Do
+    NOT change DATABASE_URL without confirmation. Before recording, verify
+    service stability and review the three main screens visually. Add no new
+    features. Log this request and report the real results. Do not publish the
+    repository or submit the delivery yet.
+ACTIONS:
+  - Decision 1, applied:
+      * The system prompt was NOT modified. Verified with git diff: no change to
+        app/services/ai/prompts.py.
+      * cases.json now carries dataset_version 2 and a changelog recording both
+        versions with dates and justification.
+      * duplicate-different-words relabelled DUPLICATE -> RELATED, with a
+        label_note on the case stating why the model was right by our own
+        definition, and a provenance field recording that the example comes from
+        our Signal specification and NOT from the assessment brief.
+      * Its mock_output was changed to RELATED as well, so mock mode stays
+        coherent with the label.
+      * Created backend/evals/RESULTS.md preserving BOTH measured live runs:
+        v1 at 5/6 with the failure quoted in full and explained, and v2 at 6/6.
+        It states in those words that the model's answer did not change and that
+        the difference is NOT a model improvement, contrasting the false reading
+        ("accuracy went from 5/6 to 6/6") with the true one.
+      * Recorded ADR-019 in docs/decisions.md: label corrected, prompt
+        deliberately not, with the reasoning and the provenance correction.
+      * On the misattribution: it existed only in my chat message, never in a
+        tracked file. The repository said "the case the product exists for".
+        Provenance is now explicit in cases.json and in evals/README.md anyway.
+  - Decision 1, re-run with the REAL model, dataset v2: 6/6 cases passed,
+    duplicate precision 1.00 (n=2), recall 1.00 (n=2), 0 unverifiable
+    references, agentic retrieval on all 6 with 2 tool calls each, mean latency
+    6816 ms and max 8718 ms. The model returned RELATED for that case in BOTH
+    runs; only the label changed.
+  - Decision 2, applied to README.md: the status block now describes the
+    verified integration and links to a new section "What the first
+    authenticated run found", which documents the HTTP 400
+    ("For 'array' type, property 'maxItems' is not supported"), its cause (the
+    max_length bound on related_requests), its fix, and the fact that a written
+    prediction naming $defs was wrong. Verification status is now two tables,
+    one for what was verified against the real model with the evidence for each
+    row, one for what was verified without it and what remains unmeasured. A
+    new section "Simulated results versus real-model results" tabulates mock
+    against live side by side and states that the v1->v2 difference is not a
+    model improvement. The test count was corrected to 224 and the demonstration
+    walkthrough now describes the behaviour actually observed.
+  - Decision 3: LLM_MAX_TOOL_CALLS left at 4. Verified unchanged in config.py.
+  - Verification after all changes: 224 tests pass in 41.91s, mock eval 10/10,
+    tsc exit 0. No stale "221 tests" or "smoke test has not been run" wording
+    remains in the README or docs.
+  - Added NO new feature. Did NOT change DATABASE_URL. Did not publish, push,
+    send email or record anything.
+  - The Supabase/local/production-mode procedure was delivered in chat as a
+    proposal for approval, not applied.
+================================================================================

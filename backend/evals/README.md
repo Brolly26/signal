@@ -8,6 +8,12 @@ cd backend
 
 Exit code 0 means every case matched its label.
 
+**Measured results live in [`RESULTS.md`](RESULTS.md)**, each kept against the
+dataset version that produced it. The dataset is versioned and a label is only
+ever changed with a written justification, so a number cannot be improved by
+moving the goalposts. One label has been corrected so far, and the run that
+found the error is preserved alongside the corrected one.
+
 ## What the two modes measure, and what they do not
 
 **Mock mode** replays a scripted model answer for each case. It measures the
@@ -40,7 +46,7 @@ a real model on demand.
 | Case | What it checks |
 |---|---|
 | `duplicate-obvious` | the same request, almost the same words |
-| `duplicate-different-words` | the same underlying need with no shared vocabulary — "Excel export" against "scheduled report delivery". The case the product exists for |
+| `duplicate-different-words` | the same underlying need with no shared vocabulary — "Excel export" against "scheduled report delivery". The case the product exists for. Labelled `RELATED` since dataset v2; the example comes from our own Signal specification, not from the assessment brief |
 | `related-not-duplicate` | a shared problem area that must **not** be called a duplicate. A false duplicate costs a product manager more than a missed one |
 | `distinct` | nothing relates; an empty answer must be acceptable |
 | `vague` | too little detail to compare, so `NEEDS_CLARIFICATION` |
@@ -61,12 +67,13 @@ depends on what another case or the demo data put in the database.
 ## What is deliberately absent
 
 - **No accuracy claim.** Ten cases cannot support one.
-- **No comparison between `agentic` and `backend_fallback` retrieval yet.** That
-  comparison is the promise made in ADR-004 and it needs live runs to mean
-  anything: in mock mode both paths replay the same scripted answer, so
-  comparing them would measure nothing. `ai_analyses.retrieval_mode` already
-  records which path produced every analysis, so the data for it is being
-  collected.
-- **No latency figure from live runs yet**, because the authenticated smoke test
-  has not been run. Mock-mode latency is the pipeline's own overhead with no
-  network in it, which is why it reads in single-digit milliseconds.
+- **No comparison between `agentic` and `backend_fallback` retrieval yet.** It
+  is the promise made in ADR-004, and it is still unmeasured — but for a reason
+  worth recording: across every live run so far the model has chosen to search,
+  so `retrieval_mode` was `agentic` on all of them and the fallback never
+  executed. Comparing the two needs cases that provoke the fallback, which is
+  not something a prompt can request on demand.
+- **No cost figure.** The provider returns token usage on every call and the
+  harness does not record it, so the cost side of any model comparison is
+  guesswork. Mock-mode latency is the pipeline's own overhead with no network in
+  it, which is why it reads in single-digit milliseconds.

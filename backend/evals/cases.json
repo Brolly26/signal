@@ -9,7 +9,25 @@
     "`mock_output` is the model response replayed in mock mode. It exists to",
     "exercise the pipeline - reference checking, derivation, persistence - and",
     "says NOTHING about whether a real model would answer this way. Live mode",
-    "ignores it entirely."
+    "ignores it entirely.",
+    "",
+    "The dataset is versioned. A label is only ever changed with a written",
+    "justification, and every measured result is kept in RESULTS.md against the",
+    "version it was produced from, so a number can never be quietly improved by",
+    "moving the goalposts."
+  ],
+  "dataset_version": 2,
+  "changelog": [
+    {
+      "version": 1,
+      "date": "2026-10-16",
+      "note": "Initial labelled set. Measured live result preserved in RESULTS.md: 5 of 6 cases, duplicate precision 1.00 (n=2), recall 0.67 (n=3)."
+    },
+    {
+      "version": 2,
+      "date": "2026-10-16",
+      "note": "duplicate-different-words relabelled DUPLICATE -> RELATED. The v1 label contradicted the definition in our own system prompt, which reserves DUPLICATE for essentially the same need and defines RELATED as a shared problem where the requests are not interchangeable and could ship separately. The system prompt was deliberately NOT changed. This is a dataset correction, so any difference in the measured result is NOT a model improvement."
+    }
   ],
   "cases": [
     {
@@ -49,6 +67,8 @@
     {
       "id": "duplicate-different-words",
       "description": "The same underlying need, with no vocabulary in common. This is the case the product exists for.",
+      "provenance": "The Excel-export-versus-scheduled-report example comes from our own Signal product specification, NOT from the assessment brief. Earlier wording implied otherwise and was wrong.",
+      "label_note": "Labelled RELATED since dataset v2. It was DUPLICATE in v1, and the real model answered RELATED. The model was right by our own definition: our system prompt reserves DUPLICATE for requests representing essentially the same need, and defines RELATED as a shared underlying problem where the requests 'are not interchangeable and could be delivered separately'. An export button and a scheduled email are not interchangeable. The v1 label contradicted the prompt; the label was corrected, not the prompt. See RESULTS.md.",
       "fixtures": [
         {
           "key": "scheduled-report",
@@ -61,21 +81,21 @@
         "description": "I need an Excel export. Every Friday I copy the numbers out by hand and email a spreadsheet to my manager."
       },
       "expect": {
-        "classification": "DUPLICATE",
-        "duplicates": ["scheduled-report"],
-        "related": []
+        "classification": "RELATED",
+        "duplicates": [],
+        "related": ["scheduled-report"]
       },
       "mock_output": {
         "underlying_need": "Get the weekly sales figures to a manager every Friday without manual work.",
         "problem_summary": "The customer rebuilds and sends the same report by hand each week.",
         "suggested_theme": "Reporting",
-        "reasoning": "The Excel export is the workaround the customer imagined; the need is the weekly report reaching the manager automatically, which the existing request already describes.",
+        "reasoning": "The Excel export is the workaround the customer imagined, and the need underneath it is the weekly report reaching the manager without manual work. The existing request asks for that by scheduled email. The problem is shared, but an export and a scheduled send are separate deliverables and either could ship alone, so this is related rather than a duplicate.",
         "needs_clarification": false,
         "related": [
           {
             "key": "scheduled-report",
-            "relationship_type": "DUPLICATE",
-            "explanation": "Both describe the weekly sales report reaching the manager without manual work; one proposes an export, the other scheduled delivery."
+            "relationship_type": "RELATED",
+            "explanation": "Both are driven by the weekly sales report reaching the manager without manual work, but one asks for an export and the other for scheduled delivery, which are separate deliverables."
           }
         ]
       }
