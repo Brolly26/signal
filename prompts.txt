@@ -852,3 +852,74 @@ ACTIONS:
     temporary folder, outside the repository.
   - Added no features, published nothing, sent nothing, recorded nothing.
 ================================================================================
+================================================================================
+[2026-10-16T15:48:14-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Approves the Supabase validation and authorises final demonstration
+  adjustments.
+  1. Database: use Supabase during the recording; the latency is acceptable and
+     stability and memory take priority. Do NOT add architectural optimisations
+     now. Keep the ability to return to local PostgreSQL. Do not expose
+     connection strings or credentials.
+  2. Authorised visual changes: fix the voting control, which does not
+     communicate its function - a modern, accessible, obvious control with a
+     support icon, the word "Support", the vote count, a distinct state when
+     already supported, loading and error feedback, and responsive behaviour.
+     Preserve ALL current voting logic including duplicate prevention. Also two
+     small adjustments: make "Suggested Next Step" look like information rather
+     than a clickable button, and reposition "This is a recommendation, not a
+     decision" so it sits with the main recommendation. Do not redesign the
+     application, change the architecture or add unnecessary dependencies.
+  3. Video data: keep the nine requests for now. Prepare a safe procedure to
+     return to the initial eight immediately before recording, preserving all
+     seeded requests, their votes and the database constraints. Do NOT run that
+     reset now. It must remove only data created by the test journey that we
+     identify explicitly - no generic deletions, no recreating the database.
+  4. Validation: run pytest, typecheck and build; verify the button still
+     works; test repeated voting; confirm the visual states; obtain real screen
+     captures; confirm frontend and backend remain stable; and do not treat 30
+     requests as proof of sustained stability - run a light check of about ten
+     minutes if resources allow. Keep prompt logging updated and present real
+     results. Do not publish, record or submit yet.
+ACTIONS:
+  - Visual change 1, the voting control: rewrote the button as a pill with an
+    arrow icon, the word "Support" (hidden below the sm breakpoint, where the
+    icon and count carry it and the aria-label still announces it), the count
+    in its own badge, a filled accent state reading "Supported" when the viewer
+    has voted, a spinner replacing the icon while a request is in flight, and
+    an inline error line. aria-pressed and a descriptive aria-label are kept.
+    NO voting logic was touched: same endpoints, same authoritative count from
+    every response, same localStorage cache, same stale-prop synchronisation.
+  - Visual change 2: "Suggested next step" lost its bordered box and is now a
+    label and value, so it no longer reads as a button.
+  - Visual change 3: "This is a recommendation, not a decision" moved from the
+    bottom of the analysis to directly under the heading and the
+    recommendation. It appears exactly once.
+  - Added NO dependency and changed no architecture.
+  - Prepared scripts/reset_demo_data.py WITHOUT running it: dry run by default,
+    requires --confirm, deletes only requests whose requester_label is in an
+    explicit allow-list of journey labels, refuses if the selection would touch
+    a seeded demo:* request, relies on the schema's ON DELETE CASCADE rather
+    than manual deletes, and verifies the end state afterwards. The dry run was
+    executed and reported exactly one row to remove; the database still holds
+    9 requests, unchanged.
+  - Validation, real results: npx tsc --noEmit exit 0; npm run build compiled
+    with / and /inbox and /requests/[id] still partially prerendered; pytest
+    224 passed, exit 0; mock eval 10/10. The suite and the eval were run against
+    the LOCAL database by injecting LOCAL_DATABASE_URL into the test process, so
+    the demo database was never written to by a test; Docker was started for
+    that and shut down again afterwards.
+  - Voting verified end to end through the API after the redesign: first
+    support 201, second 200 with the count unchanged at 5 and has_voted true, a
+    third press still 5, withdraw returns 4 and has_voted false, re-support
+    returns 5, and the final state is back to the seeded 4.
+  - Voting verified in the browser: clicking Support on the board turned the
+    control into the filled "Supported 1" state, and clicking again withdrew it
+    and returned the count to 0. Real screenshots captured of the board in both
+    states and of the analysis panel showing both small adjustments.
+  - A ten-minute soak was started over api/health, api/requests, api/inbox and
+    the board page, sampling every 10 seconds; its measured result is reported
+    separately once it finishes.
+  - Connection strings and credentials were never printed. Nothing published,
+    recorded or submitted.
+================================================================================

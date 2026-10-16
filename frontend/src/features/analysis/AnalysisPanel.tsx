@@ -118,14 +118,23 @@ function CompletedAnalysis({ analysis }: { analysis: Analysis }) {
           {classification && <p className="text-sm text-muted">{classification.detail}</p>}
         </div>
         {analysis.recommendation && (
-          <div className="rounded-lg border border-border-subtle px-3 py-2 text-right">
-            <p className="text-xs uppercase tracking-wide text-subtle">Suggested next step</p>
-            <p className="text-sm font-medium text-foreground">
+          <div className="flex flex-col gap-0.5 sm:text-right">
+            <span className="text-xs uppercase tracking-wide text-subtle">
+              Suggested next step
+            </span>
+            <span className="text-sm font-medium text-muted">
               {RECOMMENDATION_LABELS[analysis.recommendation]}
-            </p>
+            </span>
           </div>
         )}
       </div>
+
+      {/* The most important sentence in the product, so it sits with the
+          recommendation rather than at the bottom of the page. */}
+      <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">
+        This is a recommendation, not a decision. A product manager approves or
+        rejects each relationship, and nothing here merges or removes a request.
+      </p>
 
       {analysis.underlying_need && (
         <Section title="Underlying need">{analysis.underlying_need}</Section>
@@ -154,11 +163,6 @@ function CompletedAnalysis({ analysis }: { analysis: Analysis }) {
       </Section>
 
       {analysis.reasoning && <Section title="Reasoning">{analysis.reasoning}</Section>}
-
-      <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">
-        This is a recommendation, not a decision. A product manager approves or
-        rejects each relationship, and nothing here merges or removes a request.
-      </p>
 
       <dl className="flex flex-wrap gap-x-6 gap-y-1 border-t border-border-subtle pt-3 text-xs text-subtle">
         {analysis.model_name && (

@@ -11,12 +11,41 @@
  * because the remembered state lives in localStorage and the server cannot see
  * it. Rendering `null` exactly like `false` keeps the first client render
  * identical to the server's.
+ *
+ * None of the voting logic changed when this control was redesigned: the same
+ * endpoints, the same authoritative count, the same localStorage cache, and
+ * duplicate prevention still enforced by the database.
  */
 
 import { useEffect, useState } from "react";
 
 import { ApiRequestError, supportRequest, withdrawSupport } from "@/lib/api";
 import { getVoterKey, hasSupportedLocally, rememberSupport } from "@/lib/voter";
+
+function ArrowIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className="size-4 shrink-0"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={filled ? 0 : 1.6}
+      strokeLinejoin="round"
+    >
+      <path d="M8 2.6 14.2 12.4a.9.9 0 0 1-.76 1.38H2.56a.9.9 0 0 1-.76-1.38Z" />
+    </svg>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <span
+      aria-hidden="true"
+      className="size-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
+    />
+  );
+}
 
 export function VoteButton({
   requestId,
@@ -33,8 +62,6 @@ export function VoteButton({
 
   // When the server re-renders this card with a different count — a sort
   // change, a search, a reload — that value is newer than ours, so adopt it.
-  // Without this the component keeps its first `initialCount` for as long as
-  // React reuses it, and someone else's votes never appear.
   if (initialCount !== serverCount) {
     setServerCount(initialCount);
     setCount(initialCount);
@@ -60,8 +87,8 @@ export function VoteButton({
     } catch (caught) {
       setError(
         caught instanceof ApiRequestError && caught.code === "network_error"
-          ? "Offline"
-          : "Failed",
+          ? "Offline — try again"
+          : "Could not save",
       );
     } finally {
       setIsPending(false);
@@ -71,7 +98,7 @@ export function VoteButton({
   const isSupported = supported === true;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col items-start gap-1">
       <button
         type="button"
         onClick={toggle}
@@ -79,21 +106,35 @@ export function VoteButton({
         aria-pressed={isSupported}
         aria-label={
           isSupported
-            ? `Withdraw support. ${count} supporters`
-            : `Support this request. ${count} supporters`
+            ? `Withdraw your support. ${count} ${count === 1 ? "person supports" : "people support"} this request`
+            : `Support this request. ${count} ${count === 1 ? "person supports" : "people support"} it`
         }
         className={[
-          "inline-flex min-w-18 items-center justify-center gap-1.5 rounded-lg border",
-          "px-3 py-1.5 text-sm font-medium transition-colors",
-          "disabled:cursor-not-allowed disabled:opacity-60",
+          "group inline-flex items-center gap-2 rounded-full border px-3 py-1.5",
+          "text-sm font-medium transition-colors",
+          "disabled:cursor-not-allowed disabled:opacity-70",
           isSupported
-            ? "border-accent bg-accent-soft text-accent"
-            : "border-border-strong bg-surface text-muted hover:border-subtle hover:text-foreground",
+            ? "border-accent bg-accent text-white hover:bg-accent-hover"
+            : "border-border-strong bg-surface text-foreground hover:border-accent hover:bg-accent-soft hover:text-accent",
         ].join(" ")}
       >
-        <span aria-hidden="true">{isSupported ? "▲" : "△"}</span>
-        <span className="tabular-nums">{count}</span>
+        {isPending ? <SpinnerIcon /> : <ArrowIcon filled={isSupported} />}
+        {/* The word is what makes the control legible; it is hidden on the
+            narrowest screens, where the icon and count still carry it and the
+            aria-label keeps it announced. */}
+        <span className="hidden sm:inline">
+          {isSupported ? "Supported" : "Support"}
+        </span>
+        <span
+          className={[
+            "tabular-nums rounded-full px-1.5 py-0.5 text-xs font-semibold",
+            isSupported ? "bg-white/20 text-white" : "bg-surface-muted text-muted",
+          ].join(" ")}
+        >
+          {count}
+        </span>
       </button>
+
       {error && (
         <span role="alert" className="text-xs text-danger">
           {error}
