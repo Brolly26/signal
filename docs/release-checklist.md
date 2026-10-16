@@ -49,7 +49,7 @@ git ls-files --error-unmatch backend/.env              # must error: not tracked
 ## 2. What ships
 
 ```bash
-git ls-files | wc -l                    # 102 files
+git ls-files | wc -l                    # 104 files as of 2026-10-16
 git ls-files | grep -cE "node_modules|\.venv|\.next"   # must be 0
 du -sh .git                             # repository size is sane
 ```
