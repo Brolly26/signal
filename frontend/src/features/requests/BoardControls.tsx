@@ -72,7 +72,7 @@ export function BoardControls({
                   ...(option.value === "recent" ? {} : { sort: option.value }),
                 },
               }}
-              aria-current={isActive ? "true" : undefined}
+              aria-current={isActive ? "page" : undefined}
               className={[
                 "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                 isActive

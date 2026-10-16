@@ -193,3 +193,23 @@ def test_an_invalid_voter_key_is_rejected(client, request_id, voter_key):
     )
 
     assert response.status_code == 422
+
+
+def test_a_request_deleted_mid_flight_returns_404_not_503(client, monkeypatch):
+    """The existence check passes, then the request disappears before the insert.
+
+    The foreign key then rejects the vote. Without explicit handling that
+    surfaced as 503, telling the caller the service was down when the request
+    simply no longer existed.
+    """
+    from app.repositories import votes as votes_repository
+
+    async def pretend_it_exists(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(votes_repository, "request_exists", pretend_it_exists)
+
+    response = support(client, MISSING_REQUEST)
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"

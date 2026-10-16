@@ -11,6 +11,7 @@ this replaced the 409 the earlier plan described.
 from uuid import UUID
 
 import asyncpg
+from asyncpg.exceptions import ForeignKeyViolationError
 from fastapi import HTTPException, status
 
 from app.repositories import votes as votes_repository
@@ -41,7 +42,15 @@ async def add_vote(
     """
     async with pool.acquire() as connection:
         await _ensure_request_exists(connection, request_id)
-        created = await votes_repository.add_vote(connection, request_id, voter_key)
+        try:
+            created = await votes_repository.add_vote(connection, request_id, voter_key)
+        except ForeignKeyViolationError as exc:
+            # The request was deleted between the existence check and the insert.
+            # Without this the foreign key would surface as a 503, telling the
+            # caller the service is down when the request simply no longer exists.
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Feature request not found."
+            ) from exc
         return await _result(connection, request_id, voter_key), created
 
 

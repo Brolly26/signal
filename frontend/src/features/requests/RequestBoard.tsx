@@ -141,7 +141,19 @@ export async function RequestBoard({ searchParams }: { searchParams: SearchParam
           <EmptyState
             title="No matching requests"
             description={`Nothing matches “${query}”. Try a different term, or clear the search to see everything.`}
-            action={<ButtonLink href="/" variant="secondary">Clear search</ButtonLink>}
+            action={
+              // Keeps the chosen ordering, like the Clear link in the controls.
+              <ButtonLink
+                href={
+                  page.sort === "recent"
+                    ? "/"
+                    : { pathname: "/", query: { sort: page.sort } }
+                }
+                variant="secondary"
+              >
+                Clear search
+              </ButtonLink>
+            }
           />
         ) : (
           <EmptyState

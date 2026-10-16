@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { ButtonLink } from "@/components/ui";
-import { RequestBoard, RequestBoardSkeleton } from "@/features/requests/RequestList";
+import { RequestBoard, RequestBoardSkeleton } from "@/features/requests/RequestBoard";
 
 export default function RequestBoardPage({ searchParams }: PageProps<"/">) {
   return (

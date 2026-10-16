@@ -31,11 +31,19 @@ _LATEST_ANALYSIS_JOIN = """
 # "rep" would find nothing. The substring arms cover that at the cost of a
 # sequential scan; at this scale that is the right trade, and the alternative
 # (a trigram index) is noted in docs/decisions.md.
-_SEARCH_PREDICATE = """
-    ($3::text IS NULL
-     OR r.search_vector @@ plainto_tsquery('english', $3)
-     OR strpos(lower(r.title), lower($3)) > 0
-     OR strpos(lower(r.description), lower($3)) > 0)
+#
+# The list and count queries bind the search term at different positions, so the
+# placeholder number is a parameter of the builder. An earlier version produced
+# the count query with `_SEARCH_PREDICATE.replace("$3", "$1")`, which worked but
+# would silently corrupt the query the moment the predicate gained a `$30` or a
+# second meaning for `$3`.
+def _search_predicate(placeholder: int) -> str:
+    param = f"${placeholder}"
+    return f"""
+    ({param}::text IS NULL
+     OR r.search_vector @@ plainto_tsquery('english', {param})
+     OR strpos(lower(r.title), lower({param})) > 0
+     OR strpos(lower(r.description), lower({param})) > 0)
 """
 
 # Fixed, hand-written ORDER BY clauses selected by a validated enum. Nothing
@@ -59,7 +67,7 @@ SELECT {_RETURNED_COLUMNS}
 _COUNT_SQL = f"""
 SELECT count(*)
   FROM feature_requests AS r
- WHERE {_SEARCH_PREDICATE.replace("$3", "$1")}
+ WHERE {_search_predicate(1)}
 """
 
 
@@ -68,7 +76,7 @@ def _list_sql(sort: str) -> str:
 SELECT {_RETURNED_COLUMNS}
   FROM feature_requests AS r
   {_LATEST_ANALYSIS_JOIN}
- WHERE {_SEARCH_PREDICATE}
+ WHERE {_search_predicate(3)}
  ORDER BY {_ORDER_BY_CLAUSES[sort]}
  LIMIT $1 OFFSET $2
 """

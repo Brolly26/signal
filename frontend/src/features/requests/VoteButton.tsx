@@ -26,9 +26,19 @@ export function VoteButton({
   initialCount: number;
 }) {
   const [count, setCount] = useState(initialCount);
+  const [serverCount, setServerCount] = useState(initialCount);
   const [supported, setSupported] = useState<boolean | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // When the server re-renders this card with a different count — a sort
+  // change, a search, a reload — that value is newer than ours, so adopt it.
+  // Without this the component keeps its first `initialCount` for as long as
+  // React reuses it, and someone else's votes never appear.
+  if (initialCount !== serverCount) {
+    setServerCount(initialCount);
+    setCount(initialCount);
+  }
 
   useEffect(() => {
     setSupported(hasSupportedLocally(requestId));
