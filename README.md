@@ -10,11 +10,15 @@ relationships with the evidence behind them — for a human to approve or reject
 The operating principle is **AI recommends, humans decide**. The model never
 deletes, merges or alters a request.
 
-> **Status: Phase 0 of 7 complete.** Project structure, database schema,
-> migrations, connection pooling and the health endpoint are implemented and
-> tested. The product features — request submission, search, voting, AI analysis
-> and the review queue — are not built yet. This README documents what exists
-> today; sections marked *(planned)* are not implemented.
+> **Status: Phase 1 of 7 complete.** Working today: submitting a feature
+> request, validation, persistence in PostgreSQL, `POST`/`GET /api/requests`,
+> and the Request Board and submission form in Next.js with loading, empty,
+> validation-error, success and API-unavailable states.
+>
+> Not built yet: voting, search, AI analysis, and the review queue. Sections
+> marked *(planned)* are not implemented. A new request reports
+> `analysis_state: "not_requested"` — no analysis is queued, because the
+> orchestrator that would process it does not exist yet.
 
 ---
 
@@ -218,11 +222,17 @@ Integration tests run against a real PostgreSQL instance, because most of them
 verify constraints and indexes that only Postgres enforces. Each test runs
 inside a transaction that is rolled back, so order never matters.
 
-**Phase 0 results — 38 passed** (see the phase report for the full list):
-schema constraints, vote uniqueness, the one-pending-analysis index, foreign-key
-rejection of fabricated references, link pair normalisation, interruption
-recovery for both "never started" and "started and hung", transactional retry,
-and two concurrent retries where only one may win.
+**Latest run — 84 passed.** Schema constraints, vote uniqueness, the
+one-pending-analysis index, foreign-key rejection of fabricated references, link
+pair normalisation, interruption recovery for both "never started" and "started
+and hung", transactional retry, two concurrent retries where only one may win,
+request validation (lengths, blank input, unknown fields, control-character
+stripping), `POST`/`GET /api/requests`, persistence verified directly in
+PostgreSQL, the absence of any queued analysis row, pagination bounds, and the
+503 and 500 error paths asserting no credential appears in the response.
+
+The frontend is verified with `npx tsc --noEmit` and `npm run build`, plus a
+live end-to-end check of all four board states against a running backend.
 
 An evaluation suite over labelled cases, including adversarial input and prompt
 injection, is planned for Phase 5.
