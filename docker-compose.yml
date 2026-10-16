@@ -1,0 +1,23 @@
+# Local Postgres so the project is reproducible without a Supabase account.
+# The migrations in supabase/migrations/ are plain SQL and run unchanged against
+# either target; only DATABASE_URL differs.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: signal-db
+    environment:
+      POSTGRES_USER: signal
+      POSTGRES_PASSWORD: signal
+      POSTGRES_DB: signal
+    ports:
+      - "5432:5432"
+    volumes:
+      - signal-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U signal -d signal"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  signal-postgres-data:
