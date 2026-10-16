@@ -254,6 +254,16 @@ def _score(
 async def _run_case(connection: asyncpg.Connection, case: dict, *, live: bool) -> CaseResult:
     settings = get_settings()
 
+    # Isolate the case from whatever is already committed in the database.
+    #
+    # This matters only in live mode, and it matters a lot: the search tool
+    # queries the same connection, so without this the real model would find
+    # the demo rows as well as the case fixtures, cite them legitimately, and
+    # be scored as if it had invented candidates. The delete is inside the
+    # per-case transaction that is always rolled back, so nothing is actually
+    # removed.
+    await connection.execute("DELETE FROM feature_requests")
+
     fixture_ids: dict[str, str] = {}
     for fixture in case.get("fixtures", []):
         fixture_ids[fixture["key"]] = str(

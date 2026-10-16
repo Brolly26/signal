@@ -603,3 +603,65 @@ ACTIONS:
     above. Those gaps were repaired to the wording as intended. No other
     part of this entry and no earlier entry was altered.
 ================================================================================
+================================================================================
+[2026-10-16T14:32:50-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  "Ok, pode fazer." Authorisation for both requests: apply the maxItems schema
+  fix and re-verify, then bring up Docker and the servers to execute audit
+  items 4 (end-to-end journey with real AI), 5 (live evaluation) and 6 (visual
+  review). The question about raising LLM_MAX_TOOL_CALLS from 4 to 6 was not
+  answered, so it was LEFT UNCHANGED.
+ACTIONS:
+  - Applied the fix: analysis_json_schema() now strips `maxItems`. Added three
+    unit tests locking the behaviour: the provider schema carries no unsupported
+    keyword, it keeps $defs/$ref and additionalProperties, and the 8-candidate
+    bound is still enforced by Pydantic on our side.
+  - Re-ran the authenticated smoke test: ALL FOUR STAGES PASS against
+    claude-sonnet-5-5. Stage 3 returned stop_reason=tool_use with two searches,
+    "Excel export of sales data" and "scheduled weekly emailed sales report to
+    manager" (2189 in / 165 out).
+  - SECOND DEFECT FOUND AND FIXED while running the suite with the key present:
+    the tests were making REAL calls to api.anthropic.com, because submitting a
+    request queued a genuine background analysis. The suite was slow,
+    non-deterministic and billable, and the two no-provider tests failed. An
+    autouse fixture in tests/conftest.py now clears the provider for every test.
+    224 tests then passed in 41.8s with no network access.
+  - AUDIT ITEM 4, end-to-end with the REAL model, executed step by step:
+    created a request; the analysis completed in 9032 ms with
+    retrieval_mode=agentic and tool_calls_count=2 - the model really called
+    search_existing_requests, it did not fall back; classification DUPLICATE,
+    recommendation MERGE_CANDIDATE, fabricated_refs_count 0; three candidates
+    with per-candidate relationship types (1 DUPLICATE, 2 RELATED), each with
+    its own evidence; the model's reasoning explained why scheduled delivery is
+    RELATED rather than DUPLICATE and why it excluded "Saved report templates".
+    Board listed it; search for "spreadsheet" found it; first vote 201, second
+    vote returned the same count with one row in request_votes; the inbox showed
+    all three candidates undecided; approving the duplicate created the link,
+    visible from both sides, with both originals returning 200 and the request
+    marked triaged; rejecting a related candidate recorded a second audit entry;
+    a fresh page load rendered the approved relationship, the real model output
+    and "tool calling (2 searches)".
+  - AUDIT ITEM 5, live evaluation, executed. Before running it, fixed a
+    methodological defect in my own harness: each case now deletes all
+    committed rows inside its rolled-back transaction, because otherwise the
+    real model would find the demo rows alongside the case fixtures and be
+    scored as if it had invented candidates. REAL LIVE RESULTS, 6 cases:
+      5/6 passed. All six used the agentic path with 2 tool calls each.
+      Duplicate precision 1.00 (n=2); recall 0.67 (n=3); 0 unverifiable
+      references; mean latency 6805 ms, max 8237 ms.
+      THE FAILURE IS THE FLAGSHIP CASE: duplicate-different-words, where the
+      label says DUPLICATE and the model said RELATED. The model's own
+      reasoning is defensible and matches the definition in our system prompt
+      ("not interchangeable and could be delivered separately"), so our prompt
+      and our label contradict each other. Reported to the user as a product
+      definition question; NOT silently relabelled to improve the number.
+  - Found and reported a stray database row left by the pytest run I had killed
+    with TaskStop earlier: a killed process never runs fixture teardown.
+    Removed it along with my own journey data; the database is back to the 8
+    seeded demo requests and 14 votes, with no analyses or decisions.
+  - Final verification: 224 tests pass, mock eval 10/10, tsc exit 0.
+  - The API key value was never printed, logged or echoed at any point, and is
+    not recorded in this file.
+  - Did NOT publish the repository, push, send email, record anything, or change
+    LLM_MAX_TOOL_CALLS.
+================================================================================
