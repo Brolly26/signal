@@ -739,3 +739,54 @@ ACTIONS:
   - The Supabase/local/production-mode procedure was delivered in chat as a
     proposal for approval, not applied.
 ================================================================================
+================================================================================
+[2026-10-16T14:59:30-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Approves the three final decisions and authorises preparing Signal for the
+  demonstration. Authorises migrating the demo database to a SEPARATE Supabase
+  project, but DATABASE_URL must not be changed definitively before the
+  connection is validated.
+  Technical correction from the user: Supabase's Direct connection on port 5432
+  generally uses IPv6; on an IPv4 network, consider the Session pooler - also
+  port 5432 - which supports prepared statements with asyncpg. Confirm which
+  option suits our environment before applying.
+  Requested procedure:
+    1. Wait for the user to configure the new project's connection string
+       manually, without the password being seen or logged.
+    2. Verify the connection and run the versioned migrations on the new
+       database.
+    3. Apply the fictional demo data idempotently.
+    4. Validate counts, constraints and queries.
+    5. Only after everything works, authorise the effective switch from the
+       local database to Supabase.
+    6. Prepare Next.js in production mode and FastAPI without reload to save
+       memory.
+    7. Run a complete journey with the real LLM, including tool calling, human
+       review and persistence.
+    8. Check stability and latency before recording.
+    9. Help review Request Board, Request Detail/AI Analysis and Decision Inbox
+       visually - NOT with HTML or CSS classes alone; real screen captures are
+       required.
+    10. Add no new features, do not publish to GitHub and do not record the
+        video without authorisation.
+  Keep local PostgreSQL as the recovery plan and preserve existing settings.
+ACTIONS:
+  - Logged this prompt. No application code changed, no feature added,
+    DATABASE_URL untouched.
+  - Answered the IPv6 question with measurement rather than assumption. This
+    machine HAS working global IPv6: Get-NetIPAddress reports
+    2804:2488:... on the Wi-Fi interface via RouterAdvertisement, curl -6
+    reached api6.ipify.org and the internet sees that IPv6 address, and
+    Test-NetConnection over IPv6 succeeded. So the Direct connection would
+    work here - but it depends on the recording network having IPv6, so the
+    Session pooler on port 5432 was recommended instead as the robust choice:
+    it works over IPv4 and IPv6 and supports prepared statements, unlike the
+    Transaction pooler on 6543.
+  - Proposed that the new connection string be placed in a SEPARATE variable,
+    SUPABASE_DATABASE_URL, in backend/.env. The application keeps reading
+    DATABASE_URL, which stays pointed at the local Docker Postgres, so steps 2
+    to 4 can be executed against Supabase with the running application and its
+    recovery plan untouched, and no application code has to change.
+  - Awaiting the user's manual configuration of that variable before executing
+    steps 2 onward. The password will not be printed, logged or recorded.
+================================================================================
