@@ -790,3 +790,65 @@ ACTIONS:
   - Awaiting the user's manual configuration of that variable before executing
     steps 2 onward. The password will not be printed, logged or recorded.
 ================================================================================
+================================================================================
+[2026-10-16T15:36:46-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  "Salvei" - the Supabase connection string was configured. Earlier in the same
+  exchange the user chose the Direct connection after asking which of the three
+  Supabase options to use, and asked for the ten-step preparation procedure.
+ACTIONS:
+  - Found the string had been written over DATABASE_URL rather than added as a
+    separate variable, which contradicted the user's own instruction not to
+    switch before validating and removed the local recovery plan from the file.
+    Rearranged it without ever displaying the password: DATABASE_URL restored to
+    the local Docker database, the Supabase URL moved to SUPABASE_DATABASE_URL.
+    A backup was placed in the session scratchpad, outside the repository, so it
+    can never be committed.
+  - Step 2, connection verified: PostgreSQL 17.11 (local is 16), connected in
+    1043 ms, the server sees our address as IPv6 so the Direct connection works,
+    prepared statements OK, query round-trip min 131 / mean 158 / max 262 ms,
+    and 0 of 7 Signal tables present.
+  - Step 2, migrations: ran the project's own scripts/migrate.py against
+    Supabase with the URL injected through the process environment so the
+    password never reached a command line. Applied 0001_init with checksum
+    686c78eb26794f16, identical to local. Running it again reported 0 applied,
+    1 already present.
+  - Step 3, demo data: supabase/seed.sql applied twice, 8 requests and 14 votes
+    both times, 0 analyses, 0 decisions, 0 links.
+  - Step 4, validation on Supabase: 22 checks, ALL PASSED. Ten constraints were
+    proven to reject bad data on this database, each inside a rolled-back
+    transaction - short title, short description, unknown status, duplicate
+    vote, a second pending analysis, a completed analysis with no verdict, a
+    failed analysis with no error code, a self-link, a reversed link pair, and a
+    fabricated candidate id rejected by the foreign key. Queries verified: GIN
+    and partial indexes present (22 indexes), stemming, substring fallback,
+    ordering by support, and search_vector generated ALWAYS.
+  - Step 5, swap applied after validation passed, as instructed. DATABASE_URL
+    now points at Supabase; LOCAL_DATABASE_URL keeps the local string so
+    recovery is one edit plus docker compose up. The local volume is untouched.
+  - Step 6: FastAPI started without --reload, Next.js started from the existing
+    production build. Docker Desktop and the local container were stopped,
+    which took free memory from 875 MB to 1192 MB, and then to 1799 MB with
+    both servers running.
+  - Step 7, full journey with the real LLM on Supabase: analysis completed in
+    11.8 s wall clock with model latency 9062 ms, retrieval_mode agentic,
+    tool_calls_count 2, fabricated_refs_count 0. Classification DUPLICATE of
+    "Scheduled report delivery" and RELATED to both "Export sales data to
+    Excel" and "Saved report templates" - consistent with the label correction
+    made in ADR-019. Approved the duplicate and rejected one related candidate
+    with reasons; the link appears from both sides, the request became triaged,
+    the audit log holds both decisions, and all three original requests still
+    return 200.
+  - Step 8, latency and stability measured on Supabase. API medians:
+    /api/health 399 ms, /api/requests 669 ms, /api/inbox 799 ms,
+    /api/decisions 680 ms. Page medians: / 733 ms, /inbox 853 ms,
+    /requests/<id> 1130 ms, /requests/new 3 ms. 30 consecutive API requests
+    returned 200 with no failures. The cost comes from sequential round-trips
+    that were free locally; the list endpoint alone makes four.
+  - Step 9, visual review with REAL screenshots, not HTML: captured the Request
+    Board, the Request Detail with the AI analysis and its evidence, the
+    observability footer, the Decision Inbox and the decision history. Findings
+    reported in chat. The screenshot files live in the Chrome extension's
+    temporary folder, outside the repository.
+  - Added no features, published nothing, sent nothing, recorded nothing.
+================================================================================
