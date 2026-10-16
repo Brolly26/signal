@@ -36,9 +36,11 @@ async def list_requests(
     offset: int,
 ) -> FeatureRequestPage:
     async with pool.acquire() as connection:
-        # One connection, one snapshot: the page and the total cannot disagree
-        # because a row was inserted between the two queries.
-        async with connection.transaction(readonly=True):
+        # REPEATABLE READ, not just read-only: under the default READ COMMITTED
+        # every statement takes a fresh snapshot, so a row committed between the
+        # two queries would make `total` disagree with `items`. The isolation
+        # level is what makes them consistent; `readonly` only states intent.
+        async with connection.transaction(isolation="repeatable_read", readonly=True):
             records = await requests_repository.list_requests(
                 connection, limit=limit, offset=offset
             )

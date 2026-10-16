@@ -279,6 +279,11 @@ restricted to the configured origin.
   (`eslint-config-next` → `fast-glob` → `micromatch` → `braces`). Runtime
   dependencies are only `next`, `react` and `react-dom`. `npm audit fix` does
   not resolve them and `--force` breaks the config. Accepted and documented.
+- **Logs are not redacted.** Database errors are logged as an exception type
+  without a traceback, because a connection error's message can contain the
+  DSN. The handler for genuine bugs does keep the traceback, since without it
+  nothing is diagnosable — so a production deployment needs a redacting log
+  handler in front of it.
 - **No deployment.** The application is intended to run locally.
 - Evaluation numbers come from a small labelled set and are regression
   signals, not measured production accuracy.

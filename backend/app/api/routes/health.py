@@ -32,9 +32,12 @@ async def health(response: Response) -> dict[str, object]:
                 "SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1"
             )
         database = "connected"
-    except Exception:
-        # The exception may carry the DSN, so it is logged without the message.
-        logger.exception("Health check could not reach the database")
+    except Exception as exc:
+        # Type only, no traceback: a connection error's message can contain the
+        # DSN, and `logger.exception` would write it to the log.
+        logger.error(
+            "Health check could not reach the database (%s)", type(exc).__name__
+        )
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return {

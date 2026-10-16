@@ -60,7 +60,12 @@ export async function RequestList() {
   try {
     page = await listRequests({ limit: 50 });
   } catch (error) {
-    const isNetwork = error instanceof ApiRequestError && error.code === "network_error";
+    // Only API failures are a UI state. A TypeError in this component is a bug,
+    // and dressing it up as "the API responded with an error" would hide it, so
+    // it is re-thrown to the error boundary instead.
+    if (!(error instanceof ApiRequestError)) throw error;
+
+    const isNetwork = error.code === "network_error";
     return (
       <ErrorPanel
         title={isNetwork ? "Cannot reach the API" : "Could not load requests"}

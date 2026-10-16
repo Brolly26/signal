@@ -70,8 +70,12 @@ async def handle_integrity_error(request: Request, exc: PostgresError) -> JSONRe
 
 
 async def handle_database_error(request: Request, exc: PostgresError) -> JSONResponse:
-    """The database is reachable but failed, or is not reachable at all."""
-    logger.exception("Database error on %s", request.url.path)
+    """The database is reachable but failed, or is not reachable at all.
+
+    Logged as a type without a traceback: a connection error's message can
+    contain the DSN, and `logger.exception` would write it to the log.
+    """
+    logger.error("Database error on %s (%s)", request.url.path, type(exc).__name__)
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content=error_body("database_unavailable", "The service is temporarily unavailable."),
@@ -79,6 +83,14 @@ async def handle_database_error(request: Request, exc: PostgresError) -> JSONRes
 
 
 async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+    """An unhandled exception: a bug.
+
+    Unlike the database handler, this one keeps the traceback, because without it
+    the bug is not diagnosable. The trade-off is explicit: an exception raised
+    anywhere in the stack can carry whatever it was constructed with, so a
+    production deployment needs a redacting log handler. Recorded in the
+    README under limitations.
+    """
     logger.exception("Unhandled error on %s", request.url.path)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
