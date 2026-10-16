@@ -119,3 +119,96 @@ ACTIONS:
     string is recorded in this log, by rule.
   - Waiting for explicit authorisation to begin Phase 0 implementation.
 ================================================================================
+
+================================================================================
+[2026-10-16T00:05:09-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Plan approved conceptually. Authorised Phase 0 in C:\Users\GB\Desktop\METACTO,
+  including git init and local commits, with eight final adjustments:
+    1. Fix the stale-analysis flow: retry must transactionally release an
+       interrupted pending analysis before creating another, and must also
+       detect analyses that never started. Add a test for that scenario.
+    2. Do not classify a request as DISTINCT when every candidate returned by
+       the LLM was discarded for invalid ids; treat it as a validation failure
+       or an inconclusive analysis.
+    3. Prefer Next.js 16 over Next.js 15, after verifying dependency
+       compatibility.
+    4. Real tool calling is our architectural choice, not an explicit
+       requirement of the official Metacto document; correct that claim in the
+       documentation.
+    5. Defer the optional clarification question until the essential flow works
+       and is tested.
+    6. Separate automatic AI processing time from time-to-human-decision in the
+       metrics.
+    7. Ensure CLAUDE.md contains the official Prompt Logging rule literally,
+       with the required headings and text, preserving all logged history.
+    8. Prepare creation of the public GitHub repository, but publish nothing
+       without specific authorisation.
+  Scope for P0: initial structure, environment files without secrets,
+  PostgreSQL connection, migrations and the health endpoint. Run the available
+  tests and present real results. Do not advance to P1 automatically. No push,
+  deploy or email. Log this prompt.
+ACTIONS:
+  - Item 7: rewrote CLAUDE.md so the required rule appears verbatim as a single
+    unbroken paragraph under the exact headings "## Project Rules" and
+    "### Prompt Logging"; project-specific constraints moved to a separate
+    "#### Project-specific logging constraints" subsection. Mirrored to
+    AGENTS.md. All three previously logged entries preserved untouched.
+  - Item 3: verified Next.js 16 before adopting it. next@16 declares
+    node >=20.9.0 (local Node 24.12.0) and peer react ^18.2.0 || ^19.0.0;
+    scaffolded next 16.4.2 + React 19.3.0 + Tailwind 4 + TypeScript 5.
+    "npx tsc --noEmit" exits 0 and "npm run build" compiles and prerenders.
+    npm has no "lts" dist-tag for next; 16.4.2 is the current latest.
+    Recorded 5 high npm advisories, all dev-only in the eslint glob chain
+    (eslint-config-next -> fast-glob -> micromatch -> braces); runtime deps are
+    only next/react/react-dom; "npm audit fix" does not resolve them and
+    --force breaks the config, so they are documented and accepted.
+  - Item 1: ai_analyses carries a nullable started_at. Implemented
+    app/repositories/analyses.py with release_stale_analyses (releasing both
+    "never started" and "started and hung" as failed/INTERRUPTED),
+    create_pending_analysis, mark_analysis_started (conditional on still being
+    pending, so a zombie worker cannot reclaim a row) and retry_analysis, which
+    releases and inserts inside one transaction. Concurrency is arbitrated by
+    the partial unique index ai_analyses_one_pending_per_request. Added
+    tests/integration/test_stale_analysis_recovery.py with 9 tests covering
+    both interruption shapes, the two negative cases, the sweep, the
+    transactional retry, the 409 path with rollback verification, and two
+    genuinely concurrent retries over separate connections where only one wins.
+  - Items 2, 4, 5, 6: recorded in docs/decisions.md as ADR-007 (all-invalid
+    references fail as FABRICATED_REFERENCES, never DISTINCT), ADR-004 (explicit
+    correction: tool calling is our choice, and backend-orchestrated retrieval
+    can reformulate queries too), ADR-013 (clarification question deferred) and
+    ADR-011 (AI processing time, queue wait and time-to-human-decision reported
+    separately). FABRICATED_REFERENCES and INTERRUPTED are accepted values of
+    the ai_analyses.error_code CHECK constraint, with tests.
+  - Built P0: .gitignore (written before any env file), .gitattributes,
+    .env.example with no values, docker-compose.yml (one Postgres 16 service),
+    supabase/migrations/0001_init.sql (6 tables, CHECK constraints, partial
+    unique index, FKs, generated tsvector + GIN), scripts/migrate.py (checksum
+    tracked, no Alembic), backend app (config, asyncpg pool, health endpoint,
+    analyses repository), test suite, README.md and docs/decisions.md.
+  - Executed and verified, real results: docker compose started Postgres 16 and
+    reported healthy; "python scripts/migrate.py" applied 0001_init and
+    "--status" confirms it applied with checksum 686c78eb26794f16;
+    "pip check" reports no broken requirements; "pytest" => 38 passed in 6.99s;
+    a real uvicorn boot answered GET /api/health with HTTP 200 and
+    {"status":"ok","database":"connected","schema_version":"0001_init",
+    "ai_provider_configured":false,"environment":"local"}; frontend tsc exit 0
+    and next build succeeded.
+  - git init on branch main plus six local commits, each ending with the
+    required attribution trailers. The first attempt omitted the blank line
+    before the trailer block, so git did not parse them as trailers; since
+    nothing had been pushed, the commits were recreated and the trailers now
+    parse correctly.
+  - Secret hygiene verified: backend/.env and frontend/.env.local are both
+    git-ignored (confirmed with git check-ignore), no API key pattern appears in
+    any tracked file, and the only "postgresql://" matches are the placeholder
+    in .env.example and the marker string the health test uses to assert the
+    endpoint does not leak credentials.
+  - Item 8: confirmed the GitHub CLI is installed (gh 2.102.0) and
+    authenticated as Brolly26, and confirmed by a read-only API call that the
+    repository name "signal" is still free. NOTHING was created, pushed or
+    published; the exact commands are staged in the phase report awaiting
+    specific authorisation.
+  - Did NOT advance to Phase 1, as instructed.
+================================================================================
