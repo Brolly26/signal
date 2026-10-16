@@ -404,3 +404,55 @@ ordinary characters with no escaping to get wrong. The `ORDER BY` clauses are
 fixed strings selected by a validated enum; nothing from the request is ever
 interpolated into SQL. Tests cover a `DROP TABLE` attempt and pattern
 metacharacters.
+
+---
+
+## ADR-017 — Candidate retrieval uses OR semantics; the board's search does not
+
+**Decision.** The search tool the model calls relaxes the generated tsquery from
+AND to OR (`replace(plainto_tsquery(...)::text, '&', '|')`) and orders by
+`ts_rank`. The board's user-facing search keeps AND.
+
+**Why.** `plainto_tsquery` builds an AND query. The model searches with the need
+it identified — a sentence, such as "send a recurring sales report without
+rebuilding it by hand" — so under AND every term would have to be present and
+the search returned **nothing**. This was found by a test, not by reasoning: the
+fallback path produced "no candidate requests were retrieved" for a request that
+had an obvious duplicate sitting in the table.
+
+The two searches have different jobs. Candidate retrieval optimises **recall**,
+because the model supplies precision afterwards and a candidate never seen can
+never be judged. A person typing two words into the board wants **both** words.
+Relaxing the operator on the already-sanitised tsquery keeps the stemming,
+stopword handling and escaping that `plainto_tsquery` provides, and `ts_rank`
+plus the row limit keep the result set small and ordered.
+
+**Cost accepted.** OR matching is permissive: a long query can touch many rows
+before the limit. At this scale that is irrelevant, and the fix when it stops
+being irrelevant is a `pg_trgm` index, not a different engine. A regression test
+asserts that a sentence-shaped query still retrieves a known duplicate, so this
+cannot silently revert to AND.
+
+---
+
+## ADR-018 — The detail page renders 404 content with a 200 status
+
+**Observed.** `GET /requests/{unknown-id}` in the browser renders the correct
+"page could not be found" UI, but the HTTP status is 200. The API's own
+`GET /api/requests/{unknown-id}` correctly returns 404 with the project error
+shape.
+
+**Why it happens.** The route is partially prerendered: the static shell is sent
+before the streamed boundary resolves, so the status line is already committed
+by the time `notFound()` runs inside it.
+
+**Decision: accept it and document it.** Removing the prerendered shell for that
+route would fix the status and cost the instant-navigation property on a page
+that is always dynamic anyway. Nothing in this application reads that status —
+the client reads the API's 404, which is correct — so the trade is a real UX
+property against a status code no consumer uses.
+
+**When this would be the wrong call.** If the page had to be crawled or
+monitored by something that keys on HTTP status, the route would be opted out of
+prerendering. That is a one-line change, recorded here so it is a decision
+rather than an oversight.

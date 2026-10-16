@@ -6,6 +6,8 @@ join, and `vote_count` from a scalar subquery, rather than denormalised onto
 `not_requested`, and a request with no votes counts zero.
 """
 
+from uuid import UUID
+
 import asyncpg
 
 _RETURNED_COLUMNS = """
@@ -64,6 +66,13 @@ SELECT {_RETURNED_COLUMNS}
   {_LATEST_ANALYSIS_JOIN}
 """
 
+_SELECT_ONE_SQL = f"""
+SELECT {_RETURNED_COLUMNS}
+  FROM feature_requests AS r
+  {_LATEST_ANALYSIS_JOIN}
+ WHERE r.id = $1
+"""
+
 _COUNT_SQL = f"""
 SELECT count(*)
   FROM feature_requests AS r
@@ -105,3 +114,9 @@ async def list_requests(
 
 async def count_requests(connection: asyncpg.Connection, *, query: str | None) -> int:
     return await connection.fetchval(_COUNT_SQL, query)
+
+
+async def get_request(
+    connection: asyncpg.Connection, request_id: UUID
+) -> asyncpg.Record | None:
+    return await connection.fetchrow(_SELECT_ONE_SQL, request_id)

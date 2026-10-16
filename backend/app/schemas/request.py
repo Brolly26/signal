@@ -13,6 +13,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.analysis import AnalysisOut
+
 TITLE_MIN_LENGTH = 5
 TITLE_MAX_LENGTH = 140
 DESCRIPTION_MIN_LENGTH = 20
@@ -103,6 +105,12 @@ class FeatureRequestOut(BaseModel):
     analysis_state: AnalysisState
     vote_count: int
     created_at: datetime
+
+
+class FeatureRequestDetail(FeatureRequestOut):
+    """A single request together with its most recent analysis, if any."""
+
+    analysis: "AnalysisOut | None" = None
 
 
 # How the board is ordered. `top` ranks by support, which is a demand signal

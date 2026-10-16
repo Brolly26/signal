@@ -10,6 +10,7 @@ from app.api.routes import health, requests, votes
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.db.pool import close_pool, init_pool
+from app.services import analyses as analyses_service
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -17,7 +18,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    await init_pool(settings)
+    pool = await init_pool(settings)
+    # Analyses left pending by a previous process are failed as INTERRUPTED so
+    # they are visibly retryable instead of pending forever.
+    await analyses_service.release_interrupted_analyses(pool, settings=settings)
     try:
         yield
     finally:

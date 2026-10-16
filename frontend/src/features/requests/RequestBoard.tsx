@@ -8,6 +8,8 @@
  * awaited here, inside the boundary, so the page shell stays prerenderable.
  */
 
+import Link from "next/link";
+
 import { Badge, Card, ButtonLink, EmptyState, ErrorPanel } from "@/components/ui";
 import { ApiRequestError, formatDate, listRequests } from "@/lib/api";
 import type {
@@ -45,7 +47,12 @@ function RequestCard({ request }: { request: FeatureRequest }) {
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h3 className="text-base font-semibold leading-snug text-foreground">
-            {request.title}
+            <Link
+              href={`/requests/${request.id}`}
+              className="underline-offset-4 hover:underline"
+            >
+              {request.title}
+            </Link>
           </h3>
           <div className="flex shrink-0 items-center gap-2">
             <Badge tone={request.status === "open" ? "accent" : "neutral"}>
@@ -57,7 +64,7 @@ function RequestCard({ request }: { request: FeatureRequest }) {
           </div>
         </div>
 
-        <p className="whitespace-pre-line text-sm leading-relaxed text-muted">
+        <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-muted">
           {request.description}
         </p>
 

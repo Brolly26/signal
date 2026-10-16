@@ -26,6 +26,67 @@ export interface FeatureRequest {
   created_at: string;
 }
 
+
+export type AnalysisStatus = "pending" | "completed" | "failed";
+
+export type Classification =
+  | "DUPLICATE"
+  | "RELATED"
+  | "DISTINCT"
+  | "NEEDS_CLARIFICATION";
+
+export type Recommendation =
+  | "MERGE_CANDIDATE"
+  | "LINK_AS_RELATED"
+  | "KEEP_SEPARATE"
+  | "REQUEST_CLARIFICATION";
+
+export type AnalysisErrorCode =
+  | "TIMEOUT"
+  | "PROVIDER_ERROR"
+  | "INVALID_OUTPUT"
+  | "REFUSAL"
+  | "INTERRUPTED"
+  | "FABRICATED_REFERENCES"
+  | "UNEXPECTED";
+
+export type RelationshipType = "DUPLICATE" | "RELATED";
+
+/** A candidate relationship that survived reference checking, with its evidence. */
+export interface RelatedRequest {
+  request_id: string;
+  title: string;
+  relationship_type: RelationshipType;
+  explanation: string;
+  vote_count: number;
+}
+
+export interface Analysis {
+  id: string;
+  request_id: string;
+  status: AnalysisStatus;
+  classification: Classification | null;
+  recommendation: Recommendation | null;
+  underlying_need: string | null;
+  problem_summary: string | null;
+  suggested_theme: string | null;
+  reasoning: string | null;
+  related_requests: RelatedRequest[];
+  model_name: string | null;
+  retrieval_mode: "agentic" | "backend_fallback" | null;
+  tool_calls_count: number | null;
+  fabricated_refs_count: number;
+  latency_ms: number | null;
+  error_code: AnalysisErrorCode | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface FeatureRequestDetail extends FeatureRequest {
+  analysis: Analysis | null;
+}
+
 /** How the board is ordered. `top` ranks by support, which is a demand signal
  *  and not a priority — the product never conflates the two. */
 export type RequestSort = "recent" | "top";
@@ -189,6 +250,47 @@ async function voteRequest(
 
   if (!response.ok) throw await toApiError(response);
   return (await response.json()) as VoteResult;
+}
+
+/** One request with its most recent analysis. */
+export async function getRequest(requestId: string): Promise<FeatureRequestDetail> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/requests/${requestId}`, {
+      headers: { Accept: "application/json" },
+    });
+  } catch {
+    throw new ApiRequestError("Could not reach the Signal API.", {
+      code: "network_error",
+    });
+  }
+
+  if (!response.ok) throw await toApiError(response);
+  return (await response.json()) as FeatureRequestDetail;
+}
+
+/**
+ * Queue the analysis again.
+ *
+ * 503 when no provider is configured, 404 when the request is gone, 409 while
+ * an analysis is still running — all surfaced as ApiRequestError with the
+ * message the API chose.
+ */
+export async function retryAnalysis(requestId: string): Promise<FeatureRequestDetail> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/requests/${requestId}/analyses`, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+    });
+  } catch {
+    throw new ApiRequestError("Could not reach the Signal API.", {
+      code: "network_error",
+    });
+  }
+
+  if (!response.ok) throw await toApiError(response);
+  return (await response.json()) as FeatureRequestDetail;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {

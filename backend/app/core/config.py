@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     llm_max_retries: int = 1
     llm_max_tool_calls: int = 4
     llm_max_iterations: int = 3
+    # Opus 5.5 defaults to medium and Sonnet 5.5 to high, so it is always
+    # set explicitly rather than inherited from whichever model is chosen.
+    llm_effort: str = "medium"
+    llm_max_output_tokens: int = 4096
 
     # --- analysis recovery --------------------------------------------------
     # A pending analysis whose worker started but never finished.
