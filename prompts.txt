@@ -398,3 +398,91 @@ ACTIONS:
   - Reported the Phase 3 plan in chat and did not implement it; no push, no
     publication.
 ================================================================================
+
+================================================================================
+[2026-10-16T02:10:36-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  "Comece o p3." Then, mid-turn: "Vou precisar sair. Pode rodar ate o final,
+  seguindo o padrao, revisando e fazendo, revisando e fazendo. Nao precisa mais
+  ficar me perguntando. E no final teste de ponta a ponta. Nao quero que pare
+  para me perguntar."
+  (Start Phase 3; then: run through to the end following the same pattern -
+  build, review, build, review - without asking further questions, and finish
+  with an end-to-end test.)
+ACTIONS:
+  Treated two earlier instructions as still standing, since "stop asking" was
+  about implementation decisions: NO push, publication or email, and NO
+  fabricated API results.
+
+  Phase 3 - the analysis core:
+  - schemas/ai_output.py (the untrusted model contract; the model is not asked
+    for classification or recommendation, both derived), schemas/analysis.py
+    (what the API asserts), tools/search_requests.py (one read-only tool,
+    strict, 8-row cap, analysed request excluded), services/ai/client.py
+    (LLMClient protocol + FakeLLMClient), services/ai/anthropic_client.py (the
+    real adapter, isolated so tests never need a key), services/ai/prompts.py,
+    services/ai/validation.py (allowlist + derivation), services/ai/
+    orchestrator.py (bounded loop, deterministic fallback), repositories and
+    services for the analysis lifecycle, plus the startup sweep and retry.
+  - Frontend: the analysis panel with bounded polling, evidence per candidate,
+    the failure states with a retry, and the request detail route.
+  - Self-review found and fixed: submitted text could close the untrusted block
+    it was quoted inside (now defused, visibly), and a tool_use turn with no
+    tool calls would have produced a malformed conversation.
+  - A test caught a real retrieval bug: plainto_tsquery builds an AND query, so
+    searching with a whole sentence - which is what the model does - matched
+    nothing, and the fallback reported "no candidates" for a request with an
+    obvious duplicate. Candidate retrieval now uses OR semantics with ts_rank
+    (ADR-017), with a regression test so it cannot silently revert.
+  - Also recorded ADR-018: the detail page renders 404 content with a 200
+    status under partial prerendering; accepted with the reasoning written down.
+
+  Phase 4 - the Decision Inbox:
+  - schemas/decision.py, repositories/decisions.py, services/review.py,
+    api/routes/review.py, the inbox and decision-log UI, approved links on the
+    request detail.
+  - Implements ADR-008 in one transaction. The rule worth its test: rejecting
+    removes a link only if no analysis still holds an effective approval for
+    that pair in EITHER direction.
+  - Self-review fixed: least()/greatest() needed explicit uuid casts (Postgres
+    reported DatatypeMismatchError), and the decision buttons had the same
+    stale-prop bug VoteButton had before the Phase 2 review.
+
+  Phase 5 - evaluation: ten labelled cases including adversarial ones, a report
+  that labels its own mode, and a README stating plainly that mock mode measures
+  the pipeline and not model judgement. Removed a frozen-dataclass mutation from
+  the harness during review, and made the report ASCII-only after a Unicode
+  arrow aborted a run on the Windows console.
+
+  Phase 6 - demo data and documentation: supabase/seed.sql (eight labelled
+  fictional requests, idempotent, no AI analyses, with the expected
+  classifications written down beforehand), docs/architecture.md,
+  docs/metrics.md, and a rewritten README with a verification-status table.
+
+  END-TO-END TEST, executed:
+  - 221 pytest tests pass; eval suite 10/10; tsc exit 0; next build compiled.
+  - Migrations applied; seed applied twice to prove idempotency (8 requests
+    both times).
+  - Against running servers: health reported ok; the board returned the 8
+    seeded requests with real vote counts; search for "report" matched by stem;
+    sort=top ordered 4/3/2; the UI rendered the seeded data, both sort controls
+    and the demo banner.
+  - THE AI INTEGRATION PATH WAS EXERCISED AGAINST THE REAL ENDPOINT by
+    configuring a deliberately invalid API key: a submission made a real HTTPS
+    call to api.anthropic.com through the real SDK, the 401 was mapped to
+    PROVIDER_ERROR, and the database recorded status=failed,
+    error_code=PROVIDER_ERROR, model_name=claude-sonnet-5-5, started_at and
+    completed_at, with classification NULL. The request text survived intact.
+    The UI showed "The AI provider could not be reached", "The request itself is
+    saved and unaffected" and a retry button; retry returned 202 and created a
+    NEW analysis id; the board reflected the failure; and zero rows were left
+    pending. The invalid key was then removed and .env restored, and a scan
+    confirmed it is in no tracked file.
+  - WHAT THIS DOES NOT PROVE, and is not claimed: that the provider accepts the
+    output_config.format schema for this model, or any latency or accuracy
+    figure from a real model. A valid key was never configured, so the
+    authenticated smoke test REMAINS PENDING. It is stated in the README status
+    block and in the verification-status table.
+  - Demo data left in place (8 seeded requests, 0 analyses) so the application
+    is ready to open. No push, no publication, no email.
+================================================================================
