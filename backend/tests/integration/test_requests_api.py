@@ -190,9 +190,11 @@ def test_list_returns_a_page_envelope(client):
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"items", "total", "limit", "offset"}
+    assert set(body) == {"items", "total", "limit", "offset", "query", "sort"}
     assert body["limit"] == 50
     assert body["offset"] == 0
+    assert body["query"] is None
+    assert body["sort"] == "recent"
     assert isinstance(body["items"], list)
 
 
