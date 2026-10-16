@@ -62,6 +62,41 @@ async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </Card>
 
+      {detail.links.length > 0 && (
+        <Card className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold text-foreground">
+              Approved relationships
+            </h2>
+            <p className="text-sm text-muted">
+              Confirmed by a product manager. Both requests remain separate and
+              intact.
+            </p>
+          </div>
+          <ul className="flex flex-col gap-2">
+            {detail.links.map((link) => (
+              <li
+                key={link.linked_request_id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface-muted px-4 py-3"
+              >
+                <Link
+                  href={`/requests/${link.linked_request_id}`}
+                  className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  {link.linked_request_title}
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Badge tone={link.link_type === "DUPLICATE" ? "danger" : "accent"}>
+                    {link.link_type === "DUPLICATE" ? "Duplicate" : "Related"}
+                  </Badge>
+                  <span className="text-xs text-subtle">{formatDate(link.created_at)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       <AnalysisPanel requestId={detail.id} initial={detail} />
     </div>
   );

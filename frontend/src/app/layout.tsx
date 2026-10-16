@@ -40,12 +40,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 Turn customer feedback into product clarity
               </span>
             </Link>
-            <nav aria-label="Main">
+            <nav aria-label="Main" className="flex items-center gap-1">
               <Link
                 href="/"
                 className="rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
               >
                 Request board
+              </Link>
+              <Link
+                href="/inbox"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+              >
+                Decision inbox
               </Link>
             </nav>
           </div>

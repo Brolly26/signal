@@ -83,8 +83,73 @@ export interface Analysis {
   completed_at: string | null;
 }
 
+
+export type Decision = "APPROVED" | "REJECTED" | "DISMISSED";
+
+/** A human-approved relationship. A decision, not a suggestion. */
+export interface RequestLink {
+  linked_request_id: string;
+  linked_request_title: string;
+  link_type: RelationshipType;
+  created_at: string;
+}
+
+export interface InboxCandidate {
+  request_id: string;
+  title: string;
+  relationship_type: RelationshipType;
+  explanation: string;
+  vote_count: number;
+  decision: Decision | null;
+}
+
+export interface InboxItem {
+  analysis_id: string;
+  request_id: string;
+  request_title: string;
+  request_description: string;
+  vote_count: number;
+  classification: Classification;
+  recommendation: Recommendation | null;
+  underlying_need: string | null;
+  problem_summary: string | null;
+  suggested_theme: string | null;
+  reasoning: string | null;
+  candidates: InboxCandidate[];
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface InboxPage {
+  items: InboxItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface DecisionEntry {
+  id: string;
+  analysis_id: string;
+  request_id: string;
+  request_title: string;
+  related_request_id: string | null;
+  related_request_title: string | null;
+  decision: Decision;
+  reviewer_label: string;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface DecisionHistoryPage {
+  items: DecisionEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface FeatureRequestDetail extends FeatureRequest {
   analysis: Analysis | null;
+  links: RequestLink[];
 }
 
 /** How the board is ordered. `top` ranks by support, which is a demand signal
@@ -291,6 +356,63 @@ export async function retryAnalysis(requestId: string): Promise<FeatureRequestDe
 
   if (!response.ok) throw await toApiError(response);
   return (await response.json()) as FeatureRequestDetail;
+}
+
+/** Analyses waiting for a human decision. */
+export async function getInbox(
+  { limit = 25, offset = 0 }: { limit?: number; offset?: number } = {},
+): Promise<InboxPage> {
+  return getJson<InboxPage>(`/api/inbox?limit=${limit}&offset=${offset}`);
+}
+
+/** The decision audit log, newest first. */
+export async function getDecisionHistory(
+  { limit = 25 }: { limit?: number } = {},
+): Promise<DecisionHistoryPage> {
+  return getJson<DecisionHistoryPage>(`/api/decisions?limit=${limit}`);
+}
+
+/** Approve, reject or dismiss. Returns the analysis as it now stands. */
+export async function submitDecision(
+  analysisId: string,
+  body: {
+    decision: Decision;
+    related_request_id?: string;
+    reason?: string;
+    reviewer_label?: string;
+  },
+): Promise<InboxItem> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/analyses/${analysisId}/decisions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiRequestError("Could not reach the Signal API.", {
+      code: "network_error",
+    });
+  }
+
+  if (!response.ok) throw await toApiError(response);
+  return (await response.json()) as InboxItem;
+}
+
+async function getJson<T>(path: string): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: { Accept: "application/json" },
+    });
+  } catch {
+    throw new ApiRequestError("Could not reach the Signal API.", {
+      code: "network_error",
+    });
+  }
+
+  if (!response.ok) throw await toApiError(response);
+  return (await response.json()) as T;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {

@@ -14,6 +14,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.analysis import AnalysisOut
+from app.schemas.decision import RequestLinkOut
 
 TITLE_MIN_LENGTH = 5
 TITLE_MAX_LENGTH = 140
@@ -108,9 +109,12 @@ class FeatureRequestOut(BaseModel):
 
 
 class FeatureRequestDetail(FeatureRequestOut):
-    """A single request together with its most recent analysis, if any."""
+    """A single request with its most recent analysis and its approved links."""
 
     analysis: "AnalysisOut | None" = None
+    # Relationships a human approved. Separate from the analysis candidates:
+    # these are decisions, not suggestions.
+    links: list[RequestLinkOut] = []
 
 
 # How the board is ordered. `top` ranks by support, which is a demand signal

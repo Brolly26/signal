@@ -27,6 +27,7 @@ from app.schemas.request import (
     RequestSort,
 )
 from app.services import analyses as analyses_service
+from app.services import review as review_service
 from app.services.analyses import AnalysisJob
 
 
@@ -80,7 +81,8 @@ async def get_request(pool: asyncpg.Pool, request_id: UUID) -> FeatureRequestDet
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Feature request not found.")
 
     analysis = await analyses_service.get_latest_for_request(pool, request_id)
-    return FeatureRequestDetail(**dict(record), analysis=analysis)
+    links = await review_service.get_links(pool, request_id)
+    return FeatureRequestDetail(**dict(record), analysis=analysis, links=links)
 
 
 async def list_requests(
