@@ -923,3 +923,59 @@ ACTIONS:
   - Connection strings and credentials were never printed. Nothing published,
     recorded or submitted.
 ================================================================================
+================================================================================
+[2026-10-16T16:00:30-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Approves the three visual adjustments. Before closing implementation:
+    1. Wait for the ten-minute soak to finish and present the full report:
+       requests, errors, median, p90, maximum and observed degradation.
+    2. Do NOT run the database reset yet.
+    3. Revise the reset script so the selection is confirmed by specific IDs
+       and all deletions and verifications happen in the same transaction,
+       rolling back on divergence.
+    4. Implement no new features.
+    5. Keep the nine current records until recording preparation.
+    6. Preserve the prompt history and the commits made.
+    7. Prepare a GitHub publication checklist including a secret check across
+       the whole versioned history. Do not push yet.
+    8. Report any problem found, and do not declare stability approved before
+       the test finishes.
+  After this, development closes and we move to the five-minute presentation.
+ACTIONS:
+  - Item 1, soak finished and reported with its measured numbers: 10.2 minutes,
+    48 rounds, 192 requests, ZERO non-200 responses and no request that failed
+    to complete. Medians 404 / 674 / 806 / 742 ms for api/health, api/requests,
+    api/inbox and the board page; p90 445 / 717 / 852 / 791 ms; maxima
+    2515 / 978 / 1301 / 1130 ms. One honest blemish: a single 2515 ms outlier
+    on api/health, about six times its median, which still returned 200. The
+    drift check flagged api/health at -26%, but it got FASTER (546 ms in the
+    first third to 406 ms in the last), so that is warm-up and not degradation;
+    the flag is two-sided by construction. The other three endpoints moved
+    -3%, -7% and -10%, all also faster.
+  - Item 2: the reset was NOT run. The database still holds 9 requests.
+  - Item 3, reset script revised: deletion now requires explicit --id values
+    plus --confirm, and a bare --confirm is refused. Before any transaction
+    opens it refuses ids that do not exist, ids belonging to seeded demo:*
+    requests, and ids that are not journey rows. The delete and every
+    verification run inside ONE transaction - the deleted count must match the
+    number of ids, every seeded request id captured beforehand must still be
+    present afterwards, and the end state must be exactly 8 requests, 14 votes
+    and zero analyses, candidates, decisions and links. Any divergence raises
+    and the transaction rolls back. All four refusals were exercised and the
+    dry run printed the exact command; the database still reports 9 requests.
+  - Item 4: no new feature.
+  - Item 5: the nine records are untouched.
+  - Item 6: prompts.txt and all commits preserved; nothing was rewritten.
+  - Item 7, secret scan over the ENTIRE history, 37 commits: no .env was ever
+    committed, only .env.example; no Anthropic key pattern matches any blob in
+    any commit; the only database URL in history is the <password> /
+    <project-ref> placeholder in .env.example; and the real Supabase project
+    reference appears nowhere in the history and only in backend/.env, which is
+    git-ignored and confirmed untracked. Wrote docs/release-checklist.md with
+    the runnable commands, the measured results, the reproducibility and
+    quality gates, and the create/push commands left unexecuted.
+  - Item 8: no problem was hidden. The 2515 ms outlier and the two-sided drift
+    flag are reported above rather than smoothed over, and stability was not
+    declared approved before the run completed.
+  - Nothing published, pushed, recorded or submitted.
+================================================================================
