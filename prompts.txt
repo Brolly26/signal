@@ -486,3 +486,68 @@ ACTIONS:
   - Demo data left in place (8 seeded requests, 0 analyses) so the application
     is ready to open. No push, no publication, no email.
 ================================================================================
+
+================================================================================
+[2026-10-16T13:39:30-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Audit and validation before considering Signal complete. The user also noted
+  that authorisation had been given only for P1 and that development continued
+  to P6 without per-phase approval, and instructed that from here on
+  authorisation limits be respected strictly, with no new features implemented
+  without consultation. Requested verification across seven areas:
+    1. Review of the work done (P1-P6): what is implemented, tested, pending;
+       key decisions and technical debt. Explicitly: do NOT treat 221 passing
+       tests as proof that the real AI works.
+    2. Local execution: check Docker state and available resources; explain how
+       to restart FastAPI and Next.js safely; confirm the main screens load
+       with real PostgreSQL data.
+    3. Real Anthropic integration: the user will configure ANTHROPIC_API_KEY
+       manually in backend/.env; never print, log or expose its value; after
+       their confirmation, run an authenticated smoke test, validate real model
+       support for structured output and strict tool calling, run at least one
+       complete analysis, record whether search_existing_requests was really
+       called or whether the fallback ran, and check returned ids, persistence,
+       justifications and error states.
+    4. End-to-end journey on the running system: create, browse, search, vote
+       and block a duplicate vote, run a real AI analysis, find a related or
+       duplicate request, review it in the Decision Inbox, approve or reject,
+       then refresh and confirm the decision persisted.
+    5. AI evaluation: run the labelled cases against the real model once the
+       key is set; separate mocked from real results; do not present simulated
+       precision as LLM precision; report false positives, false negatives and
+       sample limitations.
+    6. Visual and presentation review: assess whether the product looks
+       professional and communicates the AI's value; identify visual or
+       usability problems WITHOUT implementing changes yet; prepare an objective
+       journey for a five-minute video.
+    7. Delivery and security: confirm no secrets are versioned; check the commit
+       history and prompts.txt; confirm the README documents limitations, local
+       execution and trade-offs; do not publish the repository, send email or
+       record the presentation automatically.
+  The message ended mid-sentence at "Primeiro apresente".
+ACTIONS:
+  - Logged this prompt. Implemented NO application code and changed no feature.
+  - Read-only environment check: Docker Desktop's engine is NOT reachable, so
+    the Postgres container is not running; the machine has 8026 MB of RAM with
+    1512 MB free (81% used) with the application stopped, which is the context
+    for the earlier out-of-memory shell reaping; ports 8000 and 3000 are free.
+  - Read-only delivery check: 28 commits on main, clean tree, NO git remote
+    configured (nothing has been pushed anywhere); all 28 commits carry the
+    required attribution trailer; prompts.txt holds 8 entries across 488 lines
+    with monotonic timestamps; no tracked file contains an API key pattern or a
+    populated ANTHROPIC_API_KEY; no .env or .env.local file is tracked;
+    .env.example carries only empty values and non-secret defaults; the README
+    contains all thirteen expected sections including the verification-status
+    table.
+  - Delivered item 1 (the P1-P6 review, with pending work and technical debt)
+    and the read-only parts of item 2 and item 7 in chat, and stated plainly
+    which claims rest on a scripted model rather than a real one.
+  - Did NOT restart the servers: the harness stopped them under memory
+    pressure and instructs that they not be restarted unprompted.
+  - Items 3, 4 and 5 NOT started: they require the user's API key and their
+    explicit confirmation, which has not been given.
+  - On the authorisation point: stated factually that the instruction "Pode
+    rodar ate o final ... Nao precisa mais ficar me perguntando" was read as
+    covering P4-P6, accepted the stricter boundary going forward without
+    argument, and asked for nothing further.
+================================================================================
