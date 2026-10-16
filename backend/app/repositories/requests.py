@@ -1,14 +1,16 @@
 """Feature request persistence.
 
 `analysis_state` is derived from the most recent analysis row via a lateral
-join, rather than denormalised onto `feature_requests`. One source of truth: a
-request with no analysis row reports `not_requested`.
+join, and `vote_count` from a scalar subquery, rather than denormalised onto
+`feature_requests`. One source of truth: a request with no analysis row reports
+`not_requested`, and a request with no votes counts zero.
 """
 
 import asyncpg
 
 _RETURNED_COLUMNS = """
     r.id, r.title, r.description, r.requester_label, r.status, r.created_at,
+    (SELECT count(*) FROM request_votes v WHERE v.request_id = r.id) AS vote_count,
     coalesce(latest_analysis.status, 'not_requested') AS analysis_state
 """
 
@@ -22,6 +24,27 @@ _LATEST_ANALYSIS_JOIN = """
     ) AS latest_analysis ON true
 """
 
+# Full-text search first, then a plain substring match as a fallback.
+#
+# The tsvector index handles word-level and stemmed matches ("reports" finds
+# "report"), but plainto_tsquery does not match partial words, so a search for
+# "rep" would find nothing. The substring arms cover that at the cost of a
+# sequential scan; at this scale that is the right trade, and the alternative
+# (a trigram index) is noted in docs/decisions.md.
+_SEARCH_PREDICATE = """
+    ($3::text IS NULL
+     OR r.search_vector @@ plainto_tsquery('english', $3)
+     OR strpos(lower(r.title), lower($3)) > 0
+     OR strpos(lower(r.description), lower($3)) > 0)
+"""
+
+# Fixed, hand-written ORDER BY clauses selected by a validated enum. Nothing
+# from the request is ever interpolated into SQL.
+_ORDER_BY_CLAUSES = {
+    "recent": "r.created_at DESC, r.id DESC",
+    "top": "vote_count DESC, r.created_at DESC, r.id DESC",
+}
+
 _INSERT_SQL = f"""
 WITH inserted AS (
     INSERT INTO feature_requests (title, description, requester_label)
@@ -33,15 +56,22 @@ SELECT {_RETURNED_COLUMNS}
   {_LATEST_ANALYSIS_JOIN}
 """
 
-_LIST_SQL = f"""
+_COUNT_SQL = f"""
+SELECT count(*)
+  FROM feature_requests AS r
+ WHERE {_SEARCH_PREDICATE.replace("$3", "$1")}
+"""
+
+
+def _list_sql(sort: str) -> str:
+    return f"""
 SELECT {_RETURNED_COLUMNS}
   FROM feature_requests AS r
   {_LATEST_ANALYSIS_JOIN}
- ORDER BY r.created_at DESC, r.id DESC
+ WHERE {_SEARCH_PREDICATE}
+ ORDER BY {_ORDER_BY_CLAUSES[sort]}
  LIMIT $1 OFFSET $2
 """
-
-_COUNT_SQL = "SELECT count(*) FROM feature_requests"
 
 
 async def insert_request(
@@ -59,9 +89,11 @@ async def list_requests(
     *,
     limit: int,
     offset: int,
+    query: str | None,
+    sort: str,
 ) -> list[asyncpg.Record]:
-    return list(await connection.fetch(_LIST_SQL, limit, offset))
+    return list(await connection.fetch(_list_sql(sort), limit, offset, query))
 
 
-async def count_requests(connection: asyncpg.Connection) -> int:
-    return await connection.fetchval(_COUNT_SQL)
+async def count_requests(connection: asyncpg.Connection, *, query: str | None) -> int:
+    return await connection.fetchval(_COUNT_SQL, query)

@@ -101,7 +101,13 @@ class FeatureRequestOut(BaseModel):
     requester_label: str
     status: RequestStatus
     analysis_state: AnalysisState
+    vote_count: int
     created_at: datetime
+
+
+# How the board is ordered. `top` ranks by support, which is a demand signal
+# and not a priority: that distinction is the product's whole point.
+RequestSort = Literal["recent", "top"]
 
 
 class FeatureRequestPage(BaseModel):
@@ -111,3 +117,5 @@ class FeatureRequestPage(BaseModel):
     total: int
     limit: int
     offset: int
+    query: str | None = None
+    sort: RequestSort = "recent"
