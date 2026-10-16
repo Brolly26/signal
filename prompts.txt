@@ -361,3 +361,40 @@ ACTIONS:
   - Five commits on main. Did NOT implement tool calling, the Decision Inbox or
     any optional feature, and did NOT publish or push anything.
 ================================================================================
+
+================================================================================
+[2026-10-16T01:20:42-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  "Revise o p2 primeiro e depois diga para a p3."
+  (Review Phase 2 first, then report on Phase 3.)
+ACTIONS:
+  Self-review of Phase 2 - five findings, all fixed in one commit:
+    1. Real defect: a request deleted between the existence check and the vote
+       insert let the foreign key surface as 503 instead of 404. Added a test
+       that monkeypatches the existence check to reproduce the race; it fails
+       with "assert 503 == 404" against the previous code, verified by stashing
+       the fix and re-running, so the defect and the test were both real.
+    2. Brittle SQL construction: the count query came from
+       _SEARCH_PREDICATE.replace("$3", "$1"). Correct today, silently wrong
+       the moment the predicate gained a $30 or a second $3. Replaced with a
+       builder that takes the placeholder number.
+    3. Stale UI state: VoteButton captured initialCount in useState once, so
+       for as long as React reused the component across a sort change or a
+       search, another user's votes never appeared. It now adopts a changed
+       server count during render.
+    4. Inconsistency: "Clear search" in the no-match state dropped the active
+       ordering while the Clear link in the controls preserved it.
+    5. Cosmetic: aria-current="true" -> "page" on the sort links, and
+       RequestList.tsx renamed to RequestBoard.tsx to match its export.
+  - Executed and verified: pytest => 124 passed in 15.77s (123 plus the new
+    race test), 0 warnings; npx tsc --noEmit exit 0; npm run build compiled
+    with / still Partial Prerender. The search tests run the rebuilt SQL
+    against real Postgres, which is what verifies the predicate refactor.
+  - Known gap, stated not hidden: there is no frontend component test
+    framework, so finding 3 was fixed and reasoned about but is not covered by
+    an automated test.
+  - STILL PENDING: the authenticated Anthropic smoke test. ANTHROPIC_API_KEY is
+    still empty in backend/.env, so Phase 3 cannot begin.
+  - Reported the Phase 3 plan in chat and did not implement it; no push, no
+    publication.
+================================================================================
