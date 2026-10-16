@@ -22,14 +22,29 @@ export interface FeatureRequest {
   requester_label: string;
   status: RequestStatus;
   analysis_state: AnalysisState;
+  vote_count: number;
   created_at: string;
 }
+
+/** How the board is ordered. `top` ranks by support, which is a demand signal
+ *  and not a priority — the product never conflates the two. */
+export type RequestSort = "recent" | "top";
 
 export interface FeatureRequestPage {
   items: FeatureRequest[];
   total: number;
   limit: number;
   offset: number;
+  query: string | null;
+  sort: RequestSort;
+}
+
+/** Returned by every vote operation, including the idempotent no-op, so the
+ *  client can correct drifted local state from the authoritative count. */
+export interface VoteResult {
+  request_id: string;
+  vote_count: number;
+  has_voted: boolean;
 }
 
 export interface NewFeatureRequest {
@@ -87,9 +102,19 @@ async function toApiError(response: Response): Promise<ApiRequestError> {
  * in a `<Suspense>` boundary.
  */
 export async function listRequests(
-  { limit = 50, offset = 0 }: { limit?: number; offset?: number } = {},
+  {
+    limit = 50,
+    offset = 0,
+    q,
+    sort = "recent",
+  }: { limit?: number; offset?: number; q?: string; sort?: RequestSort } = {},
 ): Promise<FeatureRequestPage> {
-  const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  const query = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+    sort,
+  });
+  if (q) query.set("q", q);
 
   let response: Response;
   try {
@@ -123,6 +148,47 @@ export async function createRequest(input: NewFeatureRequest): Promise<FeatureRe
 
   if (!response.ok) throw await toApiError(response);
   return (await response.json()) as FeatureRequest;
+}
+
+/**
+ * Support a request. Idempotent: the API answers 201 when the vote is newly
+ * recorded and 200 when this identity had already supported it, and both
+ * carry the authoritative count.
+ */
+export async function supportRequest(
+  requestId: string,
+  voterKey: string,
+): Promise<VoteResult> {
+  return voteRequest("POST", requestId, voterKey);
+}
+
+/** Withdraw support. Also idempotent. */
+export async function withdrawSupport(
+  requestId: string,
+  voterKey: string,
+): Promise<VoteResult> {
+  return voteRequest("DELETE", requestId, voterKey);
+}
+
+async function voteRequest(
+  method: "POST" | "DELETE",
+  requestId: string,
+  voterKey: string,
+): Promise<VoteResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/requests/${requestId}/votes`, {
+      method,
+      headers: { "X-Voter-Key": voterKey, Accept: "application/json" },
+    });
+  } catch {
+    throw new ApiRequestError("Could not reach the Signal API.", {
+      code: "network_error",
+    });
+  }
+
+  if (!response.ok) throw await toApiError(response);
+  return (await response.json()) as VoteResult;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
