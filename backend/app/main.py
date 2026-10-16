@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, requests
+from app.api.routes import health, requests, votes
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.db.pool import close_pool, init_pool
@@ -39,13 +39,15 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_origin_list,
         allow_credentials=False,
         allow_methods=["GET", "POST", "DELETE"],
-        allow_headers=["Content-Type"],
+        # X-Voter-Key carries the browser-scoped demo identity for voting.
+        allow_headers=["Content-Type", "X-Voter-Key"],
     )
 
     register_error_handlers(app)
 
     app.include_router(health.router)
     app.include_router(requests.router)
+    app.include_router(votes.router)
     return app
 
 

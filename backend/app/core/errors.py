@@ -13,7 +13,7 @@ import logging
 from typing import Any
 
 from asyncpg.exceptions import CheckViolationError, PostgresError, UniqueViolationError
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -29,7 +29,11 @@ def error_body(code: str, message: str, fields: dict[str, str] | None = None) ->
 
 def _field_name(location: tuple[Any, ...]) -> str:
     """Turn a Pydantic error location into a field name the UI can use."""
-    parts = [str(part) for part in location if part not in ("body", "query", "path")]
+    parts = [
+        str(part)
+        for part in location
+        if part not in ("body", "query", "path", "header")
+    ]
     return ".".join(parts) if parts else "_"
 
 
@@ -69,6 +73,26 @@ async def handle_integrity_error(request: Request, exc: PostgresError) -> JSONRe
     )
 
 
+async def handle_http_exception(request: Request, exc: HTTPException) -> JSONResponse:
+    """Deliberate aborts such as 404.
+
+    FastAPI's default handler returns {"detail": ...}; this keeps every failure
+    in one shape so the client has a single thing to parse.
+    """
+    codes = {
+        status.HTTP_404_NOT_FOUND: "not_found",
+        status.HTTP_409_CONFLICT: "conflict",
+    }
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_body(
+            codes.get(exc.status_code, "request_failed"),
+            str(exc.detail) if exc.detail else "The request failed.",
+        ),
+        headers=exc.headers,
+    )
+
+
 async def handle_database_error(request: Request, exc: PostgresError) -> JSONResponse:
     """The database is reachable but failed, or is not reachable at all.
 
@@ -100,6 +124,7 @@ async def handle_unexpected_error(request: Request, exc: Exception) -> JSONRespo
 
 def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, handle_validation_error)
+    app.add_exception_handler(HTTPException, handle_http_exception)
     app.add_exception_handler(CheckViolationError, handle_integrity_error)
     app.add_exception_handler(UniqueViolationError, handle_integrity_error)
     app.add_exception_handler(PostgresError, handle_database_error)
