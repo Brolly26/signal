@@ -341,3 +341,66 @@ is all it is claimed to do.
 authorisation on every mutating endpoint, rate limiting, abuse detection, audit
 logging tied to real user ids, and no administrative endpoint exposed without
 authorisation. Listed in the README under limitations.
+
+---
+
+## ADR-015 — Supporting a request is idempotent, not a conflict
+
+**Change of decision.** The Phase 1 plan said a second vote from the same
+identity would return `409 Conflict`. It does not. `POST
+/api/requests/{id}/votes` returns `201` when the vote is newly recorded and
+`200` when this identity had already supported the request. `DELETE` is
+idempotent in the same way: withdrawing a vote that is not there returns `200`.
+
+**Why it changed.** Making the conflict an error forced a second response shape
+on that endpoint — either a `409` carrying the error envelope and no count, or a
+`409` carrying the vote payload, which would mean two different body shapes for
+the same status family. Neither is worth it for a toggle button. "I support
+this" is a statement of desired state, so the same request twice should produce
+the same state and say so.
+
+**What still prevents the duplicate.** `UNIQUE (request_id, voter_key)`, via
+`INSERT ... ON CONFLICT DO NOTHING`. The index decides, so two simultaneous
+clicks cannot both insert, and the endpoint reports what the database actually
+holds.
+
+**Every vote response carries the authoritative count and `has_voted`,**
+including the no-op. That is what lets a client whose local state has drifted —
+cleared browser storage, a second tab, a double click — correct itself from the
+response instead of guessing.
+
+**Cost accepted.** A client cannot distinguish "I just voted" from "I had
+already voted" by status code alone. It does not need to: the body says.
+
+---
+
+## ADR-016 — Search: full-text index first, substring as a fallback
+
+**Decision.** `GET /api/requests?q=` matches with
+`search_vector @@ plainto_tsquery('english', $q)` **or** a case-insensitive
+substring match on the title and description.
+
+**Why both.** The generated `tsvector` with its GIN index handles word-level and
+stemmed matches — searching `reports` finds `report` — which is what makes the
+search feel like search rather than string matching. But `plainto_tsquery` does
+not match partial words, so typing `spreadsh` would return nothing while the
+user is still typing. The substring arms cover that.
+
+**Cost accepted.** The substring arms cannot use the GIN index, so a query that
+matches nothing by word still scans the table. At this dataset size that is
+irrelevant, and the fix when it stops being irrelevant is a `pg_trgm` GIN index
+on the two columns — not a different search engine. Both behaviours are
+covered by tests, including one asserting the stemmed match specifically so a
+future change to the predicate cannot silently reduce it to substring matching.
+
+**Not done:** ranking by relevance (`ts_rank`). The board sorts by date or by
+support count, both of which a product manager can reason about. A relevance
+score mixed into that ordering would be a third, unexplainable axis.
+
+**Safety.** The search term reaches PostgreSQL only as a bound parameter, and
+the substring match uses `strpos(lower(...), lower($1))` rather than `ILIKE`
+with an interpolated pattern — so `%`, `_` and backslashes in user input are
+ordinary characters with no escaping to get wrong. The `ORDER BY` clauses are
+fixed strings selected by a validated enum; nothing from the request is ever
+interpolated into SQL. Tests cover a `DROP TABLE` attempt and pattern
+metacharacters.

@@ -10,13 +10,15 @@ relationships with the evidence behind them — for a human to approve or reject
 The operating principle is **AI recommends, humans decide**. The model never
 deletes, merges or alters a request.
 
-> **Status: Phase 1 of 7 complete.** Working today: submitting a feature
-> request, validation, persistence in PostgreSQL, `POST`/`GET /api/requests`,
-> and the Request Board and submission form in Next.js with loading, empty,
+> **Status: Phase 2 of 7 complete.** Working today: submitting a feature
+> request, validation, persistence in PostgreSQL, listing with full-text
+> search, ordering by date or support count, and supporting or withdrawing
+> support with a per-browser identity — all through the Request Board and
+> submission form in Next.js, with loading, empty, no-match,
 > validation-error, success and API-unavailable states.
 >
-> Not built yet: voting, search, AI analysis, and the review queue. Sections
-> marked *(planned)* are not implemented. A new request reports
+> Not built yet: AI analysis and the review queue. Sections marked *(planned)*
+> are not implemented. A new request reports
 > `analysis_state: "not_requested"` — no analysis is queued, because the
 > orchestrator that would process it does not exist yet.
 
@@ -167,6 +169,31 @@ cd frontend && npm install && npm run dev
 
 ---
 
+## API
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/health` | liveness, database connectivity, applied schema version |
+| `POST` | `/api/requests` | submit a request (`201`) |
+| `GET` | `/api/requests` | list, with `?q=`, `?sort=recent|top`, `?limit=`, `?offset=` |
+| `POST` | `/api/requests/{id}/votes` | support a request (`201` new, `200` already) |
+| `DELETE` | `/api/requests/{id}/votes` | withdraw support (`200`, idempotent) |
+
+Both vote endpoints take the browser-scoped identity in an `X-Voter-Key`
+header and return the authoritative count, so a client whose local state has
+drifted corrects itself from the response. Supporting is idempotent by design
+(ADR-015); the duplicate row is prevented by `UNIQUE (request_id, voter_key)`.
+
+Every failure uses one shape:
+
+```json
+{"error": {"code": "validation_error", "message": "Some fields need attention.",
+           "fields": {"title": "String should have at least 5 characters"}}}
+```
+
+`fields` appears only on validation failures. Internal and database errors
+never carry a driver message.
+
 ## Data model
 
 Six tables. The integrity rules are the point, so they live in the database
@@ -222,7 +249,7 @@ Integration tests run against a real PostgreSQL instance, because most of them
 verify constraints and indexes that only Postgres enforces. Each test runs
 inside a transaction that is rolled back, so order never matters.
 
-**Latest run — 84 passed.** Schema constraints, vote uniqueness, the
+**Latest run — 123 passed.** Schema constraints, vote uniqueness, the
 one-pending-analysis index, foreign-key rejection of fabricated references, link
 pair normalisation, interruption recovery for both "never started" and "started
 and hung", transactional retry, two concurrent retries where only one may win,
@@ -230,6 +257,12 @@ request validation (lengths, blank input, unknown fields, control-character
 stripping), `POST`/`GET /api/requests`, persistence verified directly in
 PostgreSQL, the absence of any queued analysis row, pagination bounds, and the
 503 and 500 error paths asserting no credential appears in the response.
+Voting: idempotent support, no duplicate row for the same identity, independent
+identities, withdraw and re-support, the count on the board, 404 for an unknown
+request, and a rejected voter key. Search: title and description matches,
+case-insensitivity, stemming (`reports` finds `report`), partial words, the
+search-scoped total, ordering by support, search and sort combined, and hostile
+input (`DROP TABLE`, pattern metacharacters) treated as a bound parameter.
 
 The frontend is verified with `npx tsc --noEmit` and `npm run build`, plus a
 live end-to-end check of all four board states against a running backend.
