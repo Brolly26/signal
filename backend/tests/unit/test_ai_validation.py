@@ -1,5 +1,6 @@
 """Reference checking and derivation. No database, no network, no model."""
 
+import json
 from uuid import UUID, uuid4
 
 import pytest
@@ -239,3 +240,43 @@ def test_an_unknown_relationship_type_is_rejected():
             relationship_type="MAYBE_RELATED",
             explanation="A plausible explanation here.",
         )
+
+
+# ------------------------------------------------- the provider-facing schema ---
+
+
+def test_the_schema_sent_to_the_provider_carries_no_unsupported_keyword():
+    """Verified against the real API: `maxItems` is rejected with HTTP 400.
+
+    If this fails, the schema has regained a keyword the provider refuses and
+    every analysis will fail as PROVIDER_ERROR.
+    """
+    from app.schemas.ai_output import analysis_json_schema
+
+    serialised = json.dumps(analysis_json_schema())
+
+    assert "maxItems" not in serialised
+
+
+def test_the_schema_keeps_what_the_provider_does_accept():
+    """$defs/$ref and additionalProperties were confirmed accepted, so they
+    must not be stripped along with the unsupported keyword."""
+    from app.schemas.ai_output import analysis_json_schema
+
+    schema = analysis_json_schema()
+
+    assert "$defs" in schema
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) >= {
+        "underlying_need",
+        "problem_summary",
+        "suggested_theme",
+        "reasoning",
+        "needs_clarification",
+    }
+
+
+def test_the_candidate_limit_is_still_enforced_on_our_side():
+    """The bound was removed from the provider schema, not from the contract."""
+    with pytest.raises(ValidationError):
+        output(related_requests=[claim(uuid4()) for _ in range(9)])

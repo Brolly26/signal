@@ -66,12 +66,40 @@ class AIAnalysisOutput(BaseModel):
     )
 
 
+# Keywords the provider's JSON Schema subset rejects.
+#
+# Verified against claude-sonnet-5-5 with a real authenticated request on
+# 2026-10-16: sending the schema as Pydantic generates it returns
+#   HTTP 400 output_config.format.schema:
+#   "For 'array' type, property 'maxItems' is not supported"
+# `maxItems` comes from the `max_length` bound on `related_requests`. The same
+# run confirmed that `$defs`/`$ref` and `additionalProperties: false` ARE
+# accepted, so nothing else needs removing.
+#
+# Nothing is lost by stripping it. The bound still lives on the Pydantic model
+# and is still enforced when the response is validated; only the schema used to
+# constrain generation is more permissive than our own contract. This is the
+# "never trust the model's JSON, validate it again" design doing its job — the
+# guarantee is on our side, not delegated to the provider.
+_UNSUPPORTED_SCHEMA_KEYWORDS = frozenset({"maxItems"})
+
+
+def _without_unsupported_keywords(node: object) -> object:
+    if isinstance(node, dict):
+        return {
+            key: _without_unsupported_keywords(value)
+            for key, value in node.items()
+            if key not in _UNSUPPORTED_SCHEMA_KEYWORDS
+        }
+    if isinstance(node, list):
+        return [_without_unsupported_keywords(item) for item in node]
+    return node
+
+
 def analysis_json_schema() -> dict:
     """The schema handed to the provider to constrain the response.
 
-    Generated from the model above so the two cannot drift. Pydantic emits
-    `additionalProperties: false` for `extra="forbid"` and `$defs`/`$ref` for the
-    nested claim; whether the provider accepts that shape is exactly what the
-    authenticated smoke test has to confirm.
+    Generated from the model above so the two cannot drift, then filtered down
+    to the keywords the provider accepts.
     """
-    return AIAnalysisOutput.model_json_schema()
+    return _without_unsupported_keywords(AIAnalysisOutput.model_json_schema())

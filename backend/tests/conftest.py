@@ -23,6 +23,23 @@ def settings():
     return get_settings()
 
 
+@pytest.fixture(autouse=True)
+def _no_ambient_ai_provider(settings, monkeypatch):
+    """Keep the suite hermetic: no test may reach the network by accident.
+
+    This exists because of a real incident. Once a key was configured in
+    backend/.env, `POST /api/requests` started queueing a genuine analysis in
+    its background task, so running the test suite made live calls to
+    api.anthropic.com - slow, non-deterministic and billable - and the two
+    tests that assert the no-provider behaviour began to fail.
+
+    Tests that need a provider opt in explicitly through a fixture that also
+    installs a scripted client, so the only way to reach the real API from the
+    suite is to ask for it deliberately.
+    """
+    monkeypatch.setattr(settings, "anthropic_api_key", None)
+
+
 @pytest.fixture(scope="session")
 def client() -> AsyncIterator[TestClient]:
     """TestClient as a context manager so the app lifespan really runs."""
