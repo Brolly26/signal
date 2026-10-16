@@ -212,3 +212,82 @@ ACTIONS:
     specific authorisation.
   - Did NOT advance to Phase 1, as instructed.
 ================================================================================
+
+================================================================================
+[2026-10-16T00:35:08-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Phase 0 approved. Authorised Phase 1 - Core Product Vertical Slice:
+    1. Create requests with title and description.
+    2. Validate the data in the backend with Pydantic.
+    3. Persist requests in PostgreSQL.
+    4. Implement POST and GET /api/requests.
+    5. Build the Request Board in Next.js 16.
+    6. Create the new request form.
+    7. Implement loading, error, success and empty list states.
+    8. Guarantee persistence after refreshing the page.
+  Quality requirements: modern, minimalist, professional interface entirely in
+  English; real database data, not simulated requests; reuse the existing
+  architecture; do not create pending AI analyses that will never be processed;
+  run integration tests, typecheck and build; keep prompts.txt updated; do not
+  implement voting, tool calling or the Decision Inbox in this phase.
+  Report real test results, modified files and the commands to run the
+  application locally. Do not advance to P2 or publish the repository without
+  authorisation.
+ACTIONS:
+  - Read the Next.js 16 docs bundled in node_modules/next/dist/docs before
+    writing any frontend code, as the generated frontend/AGENTS.md instructs.
+    Two facts changed the design: fetch is uncached by default in v16 (so no
+    cache: 'no-store' is needed), and with cacheComponents enabled an uncached
+    read must sit inside a <Suspense> boundary.
+  - Backend, through the existing layers: app/schemas/request.py (Pydantic
+    bounds mirroring the database CHECK constraints, whitespace normalisation,
+    whole-sequence stripping of ANSI escapes and control characters),
+    app/repositories/requests.py (insert/list/count; analysis_state derived via
+    LEFT JOIN LATERAL over the newest analysis row), app/services/requests.py
+    (unit of work; list reads page and total in one read-only transaction so
+    they cannot disagree), app/api/routes/requests.py (POST 201, GET with
+    bounded limit/offset), app/core/errors.py (single error shape
+    {error:{code,message,fields?}}; 422 validation, 409/422 constraint, 503
+    database, 500 unexpected, none carrying a driver message or DSN).
+  - No analysis is queued on creation, as required: a new request derives
+    analysis_state 'not_requested' from the absence of an analysis row, and a
+    test asserts that creating a request inserts zero ai_analyses rows.
+  - Frontend: src/lib/api.ts (typed client, ApiRequestError carrying per-field
+    messages, deterministic date formatting), src/components/ui/index.tsx
+    (button, card, badge, accessible fields with aria-invalid/aria-describedby,
+    empty/error panels, spinner), src/features/requests/RequestList.tsx (async
+    Server Component + skeleton), src/features/requests/NewRequestForm.tsx
+    (client form, field errors taken from the API's 422 rather than
+    re-implemented), src/app/page.tsx (board shell + Suspense),
+    src/app/requests/new/page.tsx, updated layout.tsx (header, nav, permanent
+    "Demo environment - no authentication" banner) and globals.css (design
+    tokens for light and dark, single focus-visible treatment).
+  - A test caught a real bug of mine: stripping the lone ESC byte left the rest
+    of an ANSI sequence as literal text ("Export [31msales data"). Escape
+    sequences are now removed whole. Also replaced the deprecated
+    HTTP_422_UNPROCESSABLE_ENTITY constant, clearing 14 warnings.
+  - Executed and verified, real results: pytest => 84 passed in 9.31s (38 from
+    P0 plus 46 new), 0 warnings; the suite leaves no rows behind (all five
+    tables back to 0). Frontend: npx tsc --noEmit exit 0; npm run build
+    compiled successfully, with / emitted as Partial Prerender (static shell,
+    server-streamed list).
+  - Live end-to-end check against a running backend and the production frontend
+    build: POST valid => 201 with the created resource; POST short title and
+    description => 422 naming both fields; POST with an unknown field => 422
+    "Extra inputs are not permitted"; GET => the created request; GET ?limit=0
+    => 422. The server-rendered board HTML contained the real database values
+    (title, description, requester label, "Not analysed"). Emptying the table
+    produced the "No requests yet" empty state, and stopping the backend
+    produced the "Cannot reach the API" panel while the page still returned
+    HTTP 200. Test data created during this check was deleted afterwards.
+  - Secret hygiene re-verified: no API key value in any tracked file,
+    backend/.env and frontend/.env.local both still ignored, and no .env file
+    staged.
+  - Four commits on main, each ending with the required attribution trailers.
+  - STILL PENDING from Phase 0, not done and not claimed as done: the
+    authenticated Anthropic smoke test. ANTHROPIC_API_KEY remains empty in
+    backend/.env, so it has not been verified that the server accepts
+    output_config and strict tool schemas for claude-sonnet-5-5.
+  - Did NOT implement voting, search, tool calling or the Decision Inbox, and
+    did NOT advance to Phase 2, as instructed.
+================================================================================
