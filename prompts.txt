@@ -1,0 +1,121 @@
+# Signal — Prompt Log
+# AI collaboration history for the Metacto Junior AI Engineer technical assessment.
+# Append-only. Timestamps are ISO 8601 with UTC offset. No secrets are recorded here.
+# Format:
+#   [timestamp] TOOL: <tool> | AUTHOR: <who wrote the prompt>
+#   PROMPT: <the instruction as received, long pastes truncated and marked>
+#   ACTIONS: <what was actually done in response>
+
+================================================================================
+[2026-10-15T22:37:34-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Master project brief for "SIGNAL — AI-First Feature Intelligence System"
+  (Metacto Junior AI Engineer technical assessment), pasted as two documents:
+  (1) sections 0-22 of the master brief and (2) section 23 "Final scope control
+  and acceptance criteria". [Full text pasted by the user; ~900 lines, truncated
+  here; the full text lives in the assessment brief, not in this log.]
+  Key instructions:
+    - Act as a Senior Software Engineer partner; discuss decisions, do not
+      generate a whole application unprompted.
+    - Explain in Brazilian Portuguese; code/docs/UI in English.
+    - FIRST OBLIGATION: create CLAUDE.md with a prompt-logging rule, mirror it in
+      AGENTS.md, create prompts.txt and log this first request with a real
+      timestamp. No application code before that.
+    - THEN: analyse the specification and present a technical plan covering
+      architecture, AI execution flow, tool calling/retrieval strategy, data
+      model, endpoints, file structure, dependencies, technical risks, testing
+      strategy, MVP scope vs. exclusions, phase complexity estimates and the
+      decisions requiring user confirmation.
+    - Do NOT implement the application yet; wait for plan approval.
+ACTIONS:
+  - Verified the project root C:\Users\GB\Desktop\METACTO was empty and not yet a
+    git repository (no repo initialised, no code written).
+  - Created CLAUDE.md with the mandatory Prompt Logging rule plus explicit logging
+    constraints (append-only, no fabrication, no secrets, cross-tool rule) and a
+    short set of engineering rules for the project.
+  - Created AGENTS.md mirroring CLAUDE.md for Codex / AGENTS.md-compatible tools.
+  - Created this prompts.txt and recorded this first prompt.
+  - Wrote no application code, no dependencies, no database objects: the technical
+    plan was delivered in the chat for review and awaits explicit approval before
+    Phase 0 implementation continues.
+================================================================================
+
+================================================================================
+[2026-10-15T23:05:28-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Review of the proposed technical plan. General direction approved (Next.js +
+  TypeScript frontend, Python + FastAPI backend, PostgreSQL with versioned SQL
+  migrations, modular architecture without microservices, one read-only search
+  tool, structured output validated with Pydantic, human review of AI
+  suggestions, automated tests and evals), with 10 required adjustments:
+    1. Use Claude Sonnet 5.5 as the initial model, configurable by environment
+       variable; only recommend Opus if tests justify the extra cost.
+    2. Revise the tool-calling justification: a backend can also issue
+       LLM-reformulated queries; a precise technical justification is required.
+    3. Define recovery for analyses left in `pending` after a backend
+       interruption, and how to prevent conflicting concurrent executions.
+    4. Specify `review_decisions` / `request_links` behaviour when an earlier
+       decision is later changed.
+    5. Distinguish a request's overall classification from its individual
+       relationships with other requests.
+    6. Reorganise the phases to start with a minimal working flow; run relevant
+       tests from the first implementations, not only in the final phase.
+    7. Preserve local reproducibility without adding unnecessary configuration.
+    8. Verify the real availability of the Anthropic API features used against
+       the installed SDK versions; do not assume documentation examples
+       guarantee compatibility without verification.
+    9. Present the four pending section-13 questions, which were missing from
+       the previous report.
+    10. Show the contents of CLAUDE.md, AGENTS.md and the first prompts.txt
+        entry to check compliance with the challenge.
+  Also: no application code in this step; log this request per the prompt
+  logging rule; deliver a final lean plan and wait for authorisation.
+ACTIONS:
+  - Logged this prompt (this entry). No application code written.
+  - Checked the local toolchain: Python 3.12.1, Node v24.12.0, npm 11.6.2,
+    Docker 28.5.1. The anthropic SDK was not installed.
+  - Item 8 verification, executed in an isolated probe venv under the session
+    scratchpad (NOT in the project): installed anthropic 1.15.0 and introspected
+    the real SDK surface. Verified: `messages.create` accepts `output_config`
+    (keys: `effort`, `format`); `ToolParam` exposes `strict`; `messages.parse`
+    exists and accepts `output_format`, `output_config` and `tools`;
+    `AsyncAnthropic` mirrors the same surface; `betas` and `fallbacks` are NOT on
+    `messages.create` but ARE on `client.beta.messages.create`; default client
+    read timeout is 600s with max_retries=2 (must be overridden);
+    `ToolChoiceToolParam` still exists in SDK types, so forced tool choice is
+    rejected server-side by the model, not client-side by the SDK.
+  - Verified dependency coexistence: anthropic 1.15.0 depends on httpx2 2.13.1
+    while FastAPI's TestClient needs httpx 0.28.1; both install together with
+    `pip check` reporting no broken requirements. FastAPI 0.143.2, asyncpg
+    0.32.0, pydantic 2.14.1, pytest 9.1.1 verified importable, and a TestClient
+    request against a scratch FastAPI app returned 200.
+  - Confirmed `statement_cache_size` exists on `asyncpg.connect` (pgbouncer
+    mitigation); on `create_pool` it is forwarded as a connect kwarg and still
+    needs verification against the real Supabase pooler.
+  - Revised the plan for all 10 adjustments and delivered it in chat with the
+    four open decisions; awaiting authorisation before implementation.
+================================================================================
+
+================================================================================
+[2026-10-15T23:24:47-03:00] TOOL: Claude Code (claude-opus-5) | AUTHOR: user
+PROMPT:
+  Answers to the four open decisions from section 13 of the plan (asked as a
+  multiple-choice prompt, answered by the user):
+    1. Database: Supabase for the demo + local Docker Postgres for
+       reproducibility, sharing the same plain-SQL migrations.
+    2. Credentials: both an Anthropic API key and a Supabase project are
+       available, so the Phase 0 real-API smoke test and the pgbouncer pooler
+       check can both be executed.
+    3. Clarification question: included in the MVP as a one-shot, skippable
+       question (no multi-turn chat).
+    4. Roles: the Decision Inbox is an open route carrying a permanent
+       "demo environment - no authentication" banner; no simulated access
+       control.
+ACTIONS:
+  - Logged these decisions (this entry). No application code written.
+  - Folded the four answers into the final plan and restated the scope.
+  - Did NOT create backend/.env and did NOT handle any secret value: the user
+    will populate the real credentials locally. No key, token or connection
+    string is recorded in this log, by rule.
+  - Waiting for explicit authorisation to begin Phase 0 implementation.
+================================================================================
