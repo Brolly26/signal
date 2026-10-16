@@ -1,0 +1,14 @@
+# Pinned to the versions verified locally on 2026-10-15 (see docs/decisions.md).
+# `pip check` reports no broken requirements with this set.
+fastapi==0.143.2
+uvicorn[standard]==0.54.0
+pydantic==2.14.1
+pydantic-settings==2.16.0
+asyncpg==0.32.0
+anthropic==1.15.0
+
+# Tests. httpx is required by Starlette's TestClient; the anthropic SDK depends
+# on the separate httpx2 distribution. Both install side by side.
+pytest==9.1.1
+pytest-asyncio==1.4.0
+httpx==0.28.1
