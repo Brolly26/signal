@@ -1066,3 +1066,50 @@ ACTIONS:
   - Nothing was published, the database was not reset, the nine records are
     untouched, and no repository file was added or changed.
 ================================================================================
+
+================================================================================
+[2026-10-17] PROMPT 20 - Relayed feedback: "do the API with Django instead of
+FastAPI, just to show we can work with Django; FastAPI is almost never used
+professionally; Django is all-included, FastAPI is only the API"
+================================================================================
+
+PROMPT (as received, relaying a third party's message):
+  "Tem uma coisa pra dizer, mas n sei se o limite vai estourar, ja esta 87% ;
+   'se vc tiver a chance, faz o API com Django inves de fast api', 'So pra
+   mostrar q conseguimos trabalhar com Django', 'Fast e quase nunca usado
+   profissionalmente', 'Django e tipo tudo incluido, Fast e so o API mesmo'"
+
+ACTIONS ACTUALLY PERFORMED:
+  - No code was written and no file in the repository was changed. This turn was
+    analysis and a recommendation only, as required by the rule that no
+    architectural change happens without stating the trade-off first.
+  - Corrected one factual claim in the relayed message: FastAPI is widely used
+    in production, particularly for AI/ML serving (Ray Serve and LangServe are
+    built on it; Netflix Dispatch uses it). Confirmed the other half of the
+    message is accurate: Django is batteries-included and FastAPI is the API
+    layer only, which is why Django dominates CRUD/SaaS delivery work.
+  - Read the signal rather than the wording: the message most likely means the
+    team's stack is Django and they want evidence of Django competence.
+  - Recommended AGAINST rewriting the backend, on the owner's own stated
+    criterion - that he must be able to defend every line in an English
+    interview. A hastily generated Django backend fails that test, and would
+    discard 224 passing tests, 19 ADRs, the recorded video and the working
+    live-model integration. Noted that the hard parts of Signal (tool calling,
+    the reference-validation gate, the derived classification, the partial
+    unique index arbitrating concurrency) are framework-independent.
+  - Proposed three alternatives in order of return on effort: (1) a prepared
+    "why not Django?" interview answer, including the concrete observation that
+    the Decision Inbox would have been a Django admin action rather than a React
+    page; (2) a `django_api/` slice serving the same GET /api/requests against
+    the same PostgreSQL schema with DRF models declared `managed = False`, so
+    nothing already working is touched and no new migrations exist; (3) an
+    ADR-020 recording the comparison.
+  - Asked for the remaining deadline before committing to item (2), and took no
+    action pending the owner's decision.
+
+
+[2026-10-17T18:21:22.4071043-03:00] [Codex]
+Prompt: AGENTS.md instructions supplied for this repository and environment context (long specification truncated). These instructions were received earlier in this turn and are being logged now, without backdating.
+Actions: Read the repository AGENTS.md and inspected README.md, docker-compose.yml, .env.example, backend/requirements.txt, frontend/package.json, and .gitignore to establish local setup requirements.
+Prompt: Deps de subir esse arquivo para o github, quero rodar ele no outro computador, oque o outro pc vai precisar para rodar?
+Actions: Prepared a Brazilian Portuguese explanation of required runtimes, database options, private environment configuration, migrations, and Windows startup commands based on repository files. No tests were executed and nothing was pushed or published.
