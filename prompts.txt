@@ -1175,3 +1175,32 @@ ACTIONS ACTUALLY PERFORMED:
     in this turn, so the 224-passing figure is the one measured earlier and not
     a fresh result. No database reset, no email, no deployment.
 
+
+[2026-10-17T18:31:13.0586067-03:00] [Codex]
+Prompt: Duas coisas que não fiz
+1. Não re-rodei os quality gates. A seção 4 do checklist pede pytest, run_eval.py e npm run build imediatamente antes de publicar. Não rodei nesta sessão — o número 224 passed é a medição anterior, não um resultado novo. Se quiser, rode e eu registro o resultado real:
+cd backend; .venv/Scripts/python -m pytest
+Lembrando: isso precisa do Postgres local (Docker ligado), porque o DATABASE_URL aponta para o Supabase agora.
+Prompt: 2. Não resetei o banco. Os registros da sua gravação continuam lá. Quando quiser limpar, rode primeiro sem argumentos para ver o que seria removido:
+Prompt: backend/.venv/Scripts/python scripts/reset_demo_data.py
+Uma coisa para você decidir
+A chave da Anthropic e a senha do Supabase nunca entraram no repositório — isso está medido. Mas se você colou qualquer uma das duas em algum lugar fora do backend/.env em algum momento (chat, bloco de notas, mensagem), rotacione as duas agora que o repositório está público e a atenção vai para ele.
+---
+Prompt: Sobre o Django: ficou em aberto. Quando me disser quanto tempo falta para a entrega, eu escrevo o ADR-020 e a resposta de entrevista — e, se houver tempo, a fatia em DRF.
+Actions: Read the release checklist, reset script, database settings, test fixtures, evaluation harness, and frontend instructions. Ran reset_demo_data.py without arguments: exit 0, 14 requests, 8 seeded requests, 1 eligible journey request with 1 analysis; no deletion performed. Observed that removing only the eligible request cannot satisfy the reset script's expected total of 8 requests. Ran frontend npx tsc --noEmit followed by npm run build: both exited 0; build generated 7/7 pages. Docker initially reported a missing engine pipe; launched Docker Desktop hidden, then received an API 500 error during startup. Retried docker compose up -d --wait db, which did not complete; interrupted that pending CLI command (exit 1). Two local database probes using LOCAL_DATABASE_URL returned ConnectionRefusedError. Did not run pytest or run_eval.py against the remote demo database; both gates remain pending and no fresh pytest result is claimed. Requested deadline and the exact Django/DRF requirement before making an architectural change. No ADR, dependency, credential, commit, push, publication, or database deletion was performed. No secret values were printed or logged. Earlier prompts in this batch are logged now after the work, without backdating their receipt.
+
+[2026-10-17T18:48:49.8721478-03:00] [Codex]
+Prompt: tentei importar o architecture.html nao conseguir acessar
+Actions: Searched repository file paths for architecture and architecture-related names. Found docs/architecture.md, but no architecture.html. Checked git status: only prompts.txt was modified. Requested the application or site used for importing and the error message to identify the intended file and access issue. No application code was changed and no tests were run.
+
+[2026-10-17T18:50:28.8686275-03:00] [Codex]
+Prompt: file:///[REDACTED]/Desktop/signal-architecture.html esse
+Actions: Confirmed that signal-architecture.html exists on the Desktop (11152 bytes). Inspected its standalone HTML, inline CSS and SVG; found no external script, stylesheet, or fetch references. Requested opening the file with the Windows default application via Start-Process. Explained that a file URL points to the current computer and that the HTML file itself must be copied to another computer. No repository code was changed and no browser rendering verification was performed.
+
+[2026-10-17T18:50:54.2766310-03:00] [Codex]
+Prompt: mas esse arquivo subiu?
+Actions: Checked tracked architecture files, local all-ref history for signal-architecture.html, repository files, remotes, and working-tree status. Only docs/architecture.md is tracked; signal-architecture.html is outside the repository on the Desktop and no matching history was found. No remote fetch, commit, or push was performed. Explained that the standalone Desktop HTML was not included in this repository's versioned files.
+
+[2026-10-17T18:51:42.4889067-03:00] [Codex]
+Prompt: faça
+Actions: User explicitly authorized adding the Desktop architecture HTML to this repository, committing it and pushing it to GitHub. Copied the standalone file to docs/signal-architecture.html and verified that its SHA256 matches the original. Ran git diff --check with no errors. Documentation-only change; no application tests were run. Existing uncommitted prompts.txt entries are the required Codex session log and are included with this documentation update. Commit and push results will be reported from the actual command output.
