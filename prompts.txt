@@ -1113,3 +1113,65 @@ Prompt: AGENTS.md instructions supplied for this repository and environment cont
 Actions: Read the repository AGENTS.md and inspected README.md, docker-compose.yml, .env.example, backend/requirements.txt, frontend/package.json, and .gitignore to establish local setup requirements.
 Prompt: Deps de subir esse arquivo para o github, quero rodar ele no outro computador, oque o outro pc vai precisar para rodar?
 Actions: Prepared a Brazilian Portuguese explanation of required runtimes, database options, private environment configuration, migrations, and Windows startup commands based on repository files. No tests were executed and nothing was pushed or published.
+
+[2026-10-17T18:22:38.4723844-03:00] [Codex]
+Prompt: Posso copiar a env e jogar aqui no outro pc?
+Actions: Explained that environment files can be transferred privately to the other computer, with backend/.env and frontend/.env.local kept in their respective locations. Clarified that localhost database settings refer to the destination computer, while a shared Supabase connection uses the same remote database. No secret values were read or logged.
+
+================================================================================
+[2026-10-17] PROMPT 21 - Adapt the demo script so each spoken line carries its
+on-screen action, then publish the repository to GitHub
+================================================================================
+
+PROMPT (as received, two messages):
+  "[pasted the current 7-beat demo script, sections 1 to 7] adapte esse texto,
+   mostrando em que cada parte devo falar e essas barras sao espacos para
+   respirar"
+  "E depois de fazer o ajuste do texto, suba tudo para o github"
+
+ACTIONS ACTUALLY PERFORMED:
+
+  Script (delivered in chat, no repository file changed):
+  - Rewrote the 7 beats with the screen action placed immediately before the
+    line it accompanies, keeping the owner's English wording and his / and //
+    breathing marks untouched. Added a pre-recording setup table naming the two
+    browser tabs, the terminal, the editor and the clipboard contents.
+  - Read `frontend/src/features/requests/VoteButton.tsx` before writing the
+    staging rather than assuming the behaviour. The control is a toggle: a
+    second click calls `withdrawSupport` and the count returns to its previous
+    value. The script now clicks Support exactly once and carries an explicit
+    warning, because a double click on camera would look like a defect.
+  - Beat 2 now actually clicks Support. In the previous version the script only
+    pointed at the button, so voting was the one product feature the video
+    mentioned without demonstrating.
+  - Read `frontend/src/features/requests/NewRequestForm.tsx` to confirm the
+    three fields before writing paste-ready text for beat 3. The requester
+    label is `demo-run`, which is the only label `scripts/reset_demo_data.py`
+    will accept for removal, so the recording can be cleaned up afterwards
+    without touching the eight seeded requests.
+  - Added a spare line for the ten-second analysis wait, marked the wait as not
+    to be cut in editing, and marked the three window switches explicitly.
+  - Advised against running pytest live on camera: `DATABASE_URL` currently
+    points at Supabase and the suite must run against the local PostgreSQL.
+
+  Publication (authorised explicitly by the repository owner in this turn;
+  visibility chosen by the owner as public when asked):
+  - Ran the four history scans from `docs/release-checklist.md` across all 41
+    commits. Measured results: `.env` never added in any commit (only
+    `.env.example`); no Anthropic key pattern anywhere in history; the only
+    non-local connection string is the `<password>` / `<project-ref>`
+    placeholder in `.env.example`; the real Supabase project reference never
+    committed. `backend/.env` is git-ignored and not tracked.
+  - Committed the previous log entry. The first commit message claimed two
+    entries when the commit contained one; it was amended before any push, so
+    no inaccurate message reached the remote.
+  - `gh repo create signal --public --source=. --remote=origin` then
+    `git push -u origin main`. Repository: https://github.com/Brolly26/signal
+  - Verified against the GitHub API after pushing, rather than assuming the
+    push was correct: remote HEAD equals local HEAD (9c707f6), visibility
+    PUBLIC, default branch `main`, 104 blobs on the remote tree, the only
+    `.env`-matching path is `.env.example`, and zero Actions secrets.
+  - Not done: the quality gates in section 4 of the checklist were not re-run
+    in this turn, so the 224-passing figure is the one measured earlier and not
+    a fresh result. No database reset, no email, no deployment.
+
